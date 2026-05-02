@@ -3,65 +3,136 @@ import { Button } from "@/components/ui/button.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import { Label } from "@/components/ui/label.tsx";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group.tsx";
-import { CreditCard, MapPin, ChevronLeft, Leaf, Loader2 } from "lucide-react";
+import {
+  CreditCard,
+  MapPin,
+  ChevronLeft,
+  Leaf,
+  Loader2,
+  Home,
+  Building2,
+  MapPinned,
+  Check,
+} from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/features/auth/useAuth";
 import { getCartApi } from "@/services/cartApi";
 import { checkoutOrderApi } from "@/services/orderApi";
+import { findMyAddressesApi } from "@/services/addressApi";
 import type { CartResponse } from "@/types/cart/CartResponse";
+import type { AddressResponse } from "@/types/address/AddressResponse";
 import { handleError } from "@/lib/utils";
 import { toast } from "sonner";
+
+const ADDRESS_TYPE_ICONS: Record<string, typeof Home> = {
+  HOME: Home,
+  OFFICE: Building2,
+  OTHER: MapPinned,
+};
+
+const ADDRESS_TYPE_LABELS: Record<string, string> = {
+  HOME: "Nhà riêng",
+  OFFICE: "Văn phòng",
+  OTHER: "Khác",
+};
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
   const { fullName } = useAuth();
-  
+
   const [cart, setCart] = useState<CartResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  
+
+  // Saved addresses
+  const [savedAddresses, setSavedAddresses] = useState<AddressResponse[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
+
   const [formData, setFormData] = useState({
     receiverName: "",
     phone: "",
     province: "",
     ward: "",
     detail: "",
+    latitude: undefined as number | undefined,
+    longitude: undefined as number | undefined,
     paymentMethod: "COD" as "COD" | "BANKING",
   });
 
   useEffect(() => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       receiverName: fullName || "",
     }));
   }, [fullName]);
 
+  // Fetch cart + saved addresses in parallel
   useEffect(() => {
-    const fetchCart = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
-        const res = await getCartApi();
-        setCart(res.data.data);
-        if (!res.data.data?.items?.length) {
+        const [cartRes, addrRes] = await Promise.all([
+          getCartApi(),
+          findMyAddressesApi(),
+        ]);
+
+        // Cart
+        setCart(cartRes.data.data);
+        if (!cartRes.data.data?.items?.length) {
           toast.error("Giỏ hàng của bạn đang trống.");
           navigate("/shop");
+          return;
+        }
+
+        // Addresses
+        const addresses = addrRes.data.data || [];
+        setSavedAddresses(addresses);
+
+        // Auto-select default address
+        const defaultAddr = addresses.find((a) => a.isDefault);
+        if (defaultAddr) {
+          applyAddress(defaultAddr);
+          setSelectedAddressId(defaultAddr.id);
         }
       } catch (error) {
-        handleError(error, "Không thể tải giỏ hàng.");
+        handleError(error, "Không thể tải dữ liệu.");
       } finally {
         setLoading(false);
       }
     };
-    fetchCart();
+    fetchData();
   }, [navigate]);
+
+  const applyAddress = (addr: AddressResponse) => {
+    setFormData((prev) => ({
+      ...prev,
+      receiverName: addr.receiverName,
+      phone: addr.phone,
+      province: addr.province,
+      ward: addr.ward,
+      detail: addr.detail,
+      latitude: addr.latitude,
+      longitude: addr.longitude,
+    }));
+  };
+
+  const handleSelectAddress = (addr: AddressResponse) => {
+    setSelectedAddressId(addr.id);
+    applyAddress(addr);
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
-    setFormData(prev => ({ ...prev, [id]: value }));
+    setFormData((prev) => ({ ...prev, [id]: value }));
+    // Once user manually edits, clear address selection
+    setSelectedAddressId(null);
   };
 
   const handlePaymentChange = (value: string) => {
-    setFormData(prev => ({ ...prev, paymentMethod: value as "COD" | "BANKING" }));
+    setFormData((prev) => ({
+      ...prev,
+      paymentMethod: value as "COD" | "BANKING",
+    }));
   };
 
   const handleSubmit = async () => {
@@ -81,6 +152,8 @@ export default function CheckoutPage() {
         province: formData.province || "-",
         ward: formData.ward || "-",
         detail: formData.detail,
+        latitude: formData.latitude,
+        longitude: formData.longitude,
         paymentMethod: formData.paymentMethod,
       });
 
@@ -145,16 +218,89 @@ export default function CheckoutPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
+            {/* Saved addresses */}
+            {savedAddresses.length > 0 && (
+              <div className="bg-white border-2 border-[#1A4331]/15">
+                <div className="px-6 py-4 border-b-2 border-[#1A4331]/10">
+                  <h2 className="flex items-center gap-2 text-[#1A4331] font-bold text-sm uppercase tracking-wider">
+                    <MapPinned className="h-4 w-4 text-[#8A9A7A]" /> Địa chỉ đã
+                    lưu
+                  </h2>
+                </div>
+                <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {savedAddresses.map((addr) => {
+                    const Icon =
+                      ADDRESS_TYPE_ICONS[addr.addressType] || MapPinned;
+                    const isSelected = selectedAddressId === addr.id;
+
+                    return (
+                      <button
+                        key={addr.id}
+                        type="button"
+                        onClick={() => handleSelectAddress(addr)}
+                        className={`text-left p-4 border-2 transition-all relative ${
+                          isSelected
+                            ? "border-[#1A4331] bg-[#1A4331]/5"
+                            : "border-[#1A4331]/10 hover:border-[#1A4331]/30"
+                        }`}
+                      >
+                        {/* Selected check */}
+                        {isSelected && (
+                          <div className="absolute top-2 right-2 h-5 w-5 rounded-full bg-[#1A4331] flex items-center justify-center">
+                            <Check className="h-3 w-3 text-white" />
+                          </div>
+                        )}
+
+                        <div className="flex items-center gap-2 mb-2">
+                          <Icon className="h-4 w-4 text-[#8A9A7A] shrink-0" />
+                          <span className="text-xs font-bold text-[#8A9A7A] uppercase">
+                            {ADDRESS_TYPE_LABELS[addr.addressType] || "Khác"}
+                          </span>
+                          {addr.isDefault && (
+                            <span className="text-[9px] font-bold bg-[#1A4331] text-white px-1.5 py-0.5 uppercase">
+                              Mặc định
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm font-bold text-[#1A4331]">
+                          {addr.receiverName}
+                        </p>
+                        <p className="text-xs text-[#1A4331]/60 mt-0.5">
+                          {addr.phone}
+                        </p>
+                        <p className="text-xs text-[#1A4331]/60 mt-1 line-clamp-2">
+                          {[addr.detail, addr.ward, addr.province]
+                            .filter(Boolean)
+                            .join(", ")}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Shipping form */}
             <div className="bg-white border-2 border-[#1A4331]/15">
               <div className="px-6 py-4 border-b-2 border-[#1A4331]/10">
                 <h2 className="flex items-center gap-2 text-[#1A4331] font-bold text-sm uppercase tracking-wider">
-                  <MapPin className="h-4 w-4 text-[#8A9A7A]" /> Thông tin giao hàng
+                  <MapPin className="h-4 w-4 text-[#8A9A7A]" /> Thông tin giao
+                  hàng
                 </h2>
+                {selectedAddressId && (
+                  <p className="text-[10px] text-[#8A9A7A] mt-1">
+                    Đang dùng địa chỉ đã lưu — bạn vẫn có thể chỉnh sửa bên
+                    dưới
+                  </p>
+                )}
               </div>
               <div className="p-6 space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="receiverName" className="text-xs font-bold text-[#1A4331] uppercase tracking-wider">
+                    <Label
+                      htmlFor="receiverName"
+                      className="text-xs font-bold text-[#1A4331] uppercase tracking-wider"
+                    >
                       Họ và tên
                     </Label>
                     <Input
@@ -166,7 +312,10 @@ export default function CheckoutPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="phone" className="text-xs font-bold text-[#1A4331] uppercase tracking-wider">
+                    <Label
+                      htmlFor="phone"
+                      className="text-xs font-bold text-[#1A4331] uppercase tracking-wider"
+                    >
                       Số điện thoại
                     </Label>
                     <Input
@@ -180,7 +329,10 @@ export default function CheckoutPage() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="province" className="text-xs font-bold text-[#1A4331] uppercase tracking-wider">
+                    <Label
+                      htmlFor="province"
+                      className="text-xs font-bold text-[#1A4331] uppercase tracking-wider"
+                    >
                       Tỉnh / Thành phố
                     </Label>
                     <Input
@@ -192,7 +344,10 @@ export default function CheckoutPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="ward" className="text-xs font-bold text-[#1A4331] uppercase tracking-wider">
+                    <Label
+                      htmlFor="ward"
+                      className="text-xs font-bold text-[#1A4331] uppercase tracking-wider"
+                    >
                       Phường / Xã
                     </Label>
                     <Input
@@ -205,7 +360,10 @@ export default function CheckoutPage() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="detail" className="text-xs font-bold text-[#1A4331] uppercase tracking-wider">
+                  <Label
+                    htmlFor="detail"
+                    className="text-xs font-bold text-[#1A4331] uppercase tracking-wider"
+                  >
                     Địa chỉ chi tiết
                   </Label>
                   <Input
@@ -219,29 +377,41 @@ export default function CheckoutPage() {
               </div>
             </div>
 
+            {/* Payment method */}
             <div className="bg-white border-2 border-[#1A4331]/15">
               <div className="px-6 py-4 border-b-2 border-[#1A4331]/10">
                 <h2 className="flex items-center gap-2 text-[#1A4331] font-bold text-sm uppercase tracking-wider">
-                  <CreditCard className="h-4 w-4 text-[#8A9A7A]" /> Phương thức thanh toán
+                  <CreditCard className="h-4 w-4 text-[#8A9A7A]" /> Phương thức
+                  thanh toán
                 </h2>
               </div>
               <div className="p-6">
-                <RadioGroup value={formData.paymentMethod} onValueChange={handlePaymentChange} className="space-y-3">
-                  <div 
+                <RadioGroup
+                  value={formData.paymentMethod}
+                  onValueChange={handlePaymentChange}
+                  className="space-y-3"
+                >
+                  <div
                     onClick={() => handlePaymentChange("COD")}
                     className={`flex items-center space-x-3 p-3 border-2 transition-colors cursor-pointer ${formData.paymentMethod === "COD" ? "border-[#1A4331] bg-[#1A4331]/5" : "border-[#1A4331]/10"}`}
                   >
                     <RadioGroupItem value="COD" id="COD" />
-                    <Label htmlFor="COD" className="flex-1 cursor-pointer text-sm text-[#1A4331] font-bold">
+                    <Label
+                      htmlFor="COD"
+                      className="flex-1 cursor-pointer text-sm text-[#1A4331] font-bold"
+                    >
                       Thanh toán khi nhận hàng (COD)
                     </Label>
                   </div>
-                  <div 
+                  <div
                     onClick={() => handlePaymentChange("BANKING")}
                     className={`flex items-center space-x-3 p-3 border-2 transition-colors cursor-pointer ${formData.paymentMethod === "BANKING" ? "border-[#1A4331] bg-[#1A4331]/5" : "border-[#1A4331]/10"}`}
                   >
                     <RadioGroupItem value="BANKING" id="BANKING" />
-                    <Label htmlFor="BANKING" className="flex-1 cursor-pointer text-sm text-[#1A4331] font-bold">
+                    <Label
+                      htmlFor="BANKING"
+                      className="flex-1 cursor-pointer text-sm text-[#1A4331] font-bold"
+                    >
                       Chuyển khoản ngân hàng (BANKING)
                     </Label>
                   </div>
@@ -250,6 +420,7 @@ export default function CheckoutPage() {
             </div>
           </div>
 
+          {/* Order summary sidebar */}
           <div className="lg:col-span-1">
             <div className="bg-white border-2 border-[#1A4331]/15 sticky top-24">
               <div className="px-6 py-4 border-b-2 border-[#1A4331]/10">
@@ -262,7 +433,9 @@ export default function CheckoutPage() {
                   <span className="text-[#1A4331]/70">
                     Tạm tính ({cart?.totalItems} sản phẩm)
                   </span>
-                  <span className="font-bold text-[#1A4331]">{formatPrice(subtotal)}</span>
+                  <span className="font-bold text-[#1A4331]">
+                    {formatPrice(subtotal)}
+                  </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-[#1A4331]/70">Phí vận chuyển</span>
@@ -278,15 +451,20 @@ export default function CheckoutPage() {
                   </div>
                 </div>
 
-                <Button 
+                <Button
                   onClick={handleSubmit}
                   disabled={submitting}
                   className="w-full bg-[#1A4331] text-[#F8F5F0] hover:bg-[#8A9A7A] rounded-none h-12 text-base font-bold mt-4"
                 >
-                  {submitting ? <Loader2 className="animate-spin h-5 w-5" /> : "Xác nhận Đặt hàng"}
+                  {submitting ? (
+                    <Loader2 className="animate-spin h-5 w-5" />
+                  ) : (
+                    "Xác nhận Đặt hàng"
+                  )}
                 </Button>
                 <p className="text-[10px] text-center text-[#8A9A7A] mt-2">
-                  Bằng cách nhấn Đặt hàng, bạn đồng ý với Điều khoản dịch vụ của Tea4Life.
+                  Bằng cách nhấn Đặt hàng, bạn đồng ý với Điều khoản dịch vụ
+                  của Tea4Life.
                 </p>
               </div>
             </div>
