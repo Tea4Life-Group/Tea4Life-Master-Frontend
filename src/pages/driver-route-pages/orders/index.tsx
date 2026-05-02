@@ -1,7 +1,18 @@
+"use client";
+
 import { useState, useEffect, useCallback } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent } from "@/components/ui/card";
-import { ChevronRight, Clock, Loader2, Package, AlertCircle } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Loader2, Package, AlertCircle, ArrowRight, Truck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   getDriverAvailableOrdersApi,
@@ -62,152 +73,171 @@ export default function DriverOrders() {
   };
 
   return (
-    <div className="p-4 space-y-6">
-      <header>
-        <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tighter">
-          Nhiệm vụ
-        </h2>
-        <p className="text-slate-400 text-xs font-bold uppercase">
-          Quản lý lộ trình giao hàng
-        </p>
-      </header>
+    <div className="space-y-6 animate-in fade-in duration-500">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">Nhiệm vụ</h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Quản lý lộ trình giao hàng
+          </p>
+        </div>
+      </div>
 
       <Tabs defaultValue="available" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 bg-slate-200/50 rounded-2xl p-1 h-12">
-          <TabsTrigger
-            value="available"
-            className="rounded-xl font-black text-xs uppercase data-[state=active]:bg-white data-[state=active]:shadow-sm"
-          >
+        <TabsList className="grid w-[400px] grid-cols-2">
+          <TabsTrigger value="available" className="gap-2">
+            <Package className="h-4 w-4" />
             Chờ lấy ({loadingAvailable ? "..." : availableOrders.length})
           </TabsTrigger>
-          <TabsTrigger
-            value="shipping"
-            className="rounded-xl font-black text-xs uppercase data-[state=active]:bg-white data-[state=active]:shadow-sm"
-          >
+          <TabsTrigger value="shipping" className="gap-2">
+            <Truck className="h-4 w-4" />
             Đang giao ({loadingShipping ? "..." : shippingOrders.length})
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="available" className="mt-6 space-y-4">
-          {loadingAvailable ? (
-            <div className="flex items-center justify-center py-16">
-              <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
-            </div>
-          ) : availableOrders.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-slate-400 gap-2">
-              <AlertCircle className="h-8 w-8" />
-              <p className="text-sm font-bold">Không có đơn hàng nào cần lấy.</p>
-            </div>
-          ) : (
-            availableOrders.map((order) => (
-              <OrderCard
-                key={order.id}
-                order={order}
-                status="ready"
-                timeAgo={formatTimeAgo(order.createdAt)}
-                onClick={() => navigate(`/driver/orders/${order.id}`)}
-              />
-            ))
-          )}
+        <TabsContent value="available" className="mt-6">
+          <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+            {loadingAvailable ? (
+              <div className="flex items-center justify-center py-20">
+                <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+              </div>
+            ) : availableOrders.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-3">
+                <AlertCircle className="h-10 w-10 text-slate-300" />
+                <p className="font-medium text-sm">Không có đơn hàng nào cần lấy.</p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Mã đơn</TableHead>
+                    <TableHead>Cửa hàng</TableHead>
+                    <TableHead>Điểm giao</TableHead>
+                    <TableHead>Thu hộ</TableHead>
+                    <TableHead>Thời gian</TableHead>
+                    <TableHead className="text-right">Thao tác</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {availableOrders.map((o) => (
+                    <TableRow key={o.id}>
+                      <TableCell className="font-bold">{o.orderCode}</TableCell>
+                      <TableCell>
+                        <p className="font-medium text-slate-800">{o.storeName}</p>
+                        <p className="text-xs text-slate-500 truncate max-w-[200px]">
+                          {o.storeAddress}
+                        </p>
+                      </TableCell>
+                      <TableCell>
+                        <p className="font-medium text-slate-800">{o.receiverName}</p>
+                        <p className="text-xs text-slate-500 truncate max-w-[200px]">
+                          {[o.detail, o.ward, o.province]
+                            .filter((s) => s && s !== "-")
+                            .join(", ")}
+                        </p>
+                      </TableCell>
+                      <TableCell>
+                        {o.paymentMethod === "COD" ? (
+                          <Badge variant="outline" className="border-amber-200 text-amber-700 bg-amber-50">
+                            {new Intl.NumberFormat("vi-VN").format(o.totalAmount)}đ
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="border-blue-200 text-blue-700 bg-blue-50">
+                            Đã thanh toán
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-xs text-slate-500">
+                        {formatTimeAgo(o.createdAt)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          size="sm"
+                          className="gap-2 bg-slate-900 hover:bg-slate-800 text-white"
+                          onClick={() => navigate(`/driver/orders/${o.id}`)}
+                        >
+                          Chi tiết
+                          <ArrowRight className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </div>
         </TabsContent>
 
-        <TabsContent value="shipping" className="mt-6 space-y-4">
-          {loadingShipping ? (
-            <div className="flex items-center justify-center py-16">
-              <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
-            </div>
-          ) : shippingOrders.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-slate-400 gap-2">
-              <AlertCircle className="h-8 w-8" />
-              <p className="text-sm font-bold">Không có đơn hàng đang giao.</p>
-            </div>
-          ) : (
-            shippingOrders.map((order) => (
-              <OrderCard
-                key={order.id}
-                order={order}
-                status="shipping"
-                timeAgo={formatTimeAgo(order.createdAt)}
-                onClick={() => navigate(`/driver/orders/${order.id}`)}
-              />
-            ))
-          )}
+        <TabsContent value="shipping" className="mt-6">
+          <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+            {loadingShipping ? (
+              <div className="flex items-center justify-center py-20">
+                <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+              </div>
+            ) : shippingOrders.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-3">
+                <AlertCircle className="h-10 w-10 text-slate-300" />
+                <p className="font-medium text-sm">Bạn chưa nhận giao đơn nào.</p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Mã đơn</TableHead>
+                    <TableHead>Khách hàng</TableHead>
+                    <TableHead>Điểm giao</TableHead>
+                    <TableHead>Thanh toán</TableHead>
+                    <TableHead>Thời gian</TableHead>
+                    <TableHead className="text-right">Thao tác</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {shippingOrders.map((o) => (
+                    <TableRow key={o.id}>
+                      <TableCell className="font-bold">{o.orderCode}</TableCell>
+                      <TableCell>
+                        <p className="font-medium text-slate-800">{o.receiverName}</p>
+                        <p className="text-xs text-slate-500">{o.phone}</p>
+                      </TableCell>
+                      <TableCell>
+                        <p className="text-xs text-slate-500 truncate max-w-[250px]">
+                          {[o.detail, o.ward, o.province]
+                            .filter((s) => s && s !== "-")
+                            .join(", ")}
+                        </p>
+                      </TableCell>
+                      <TableCell>
+                        {o.paymentMethod === "COD" ? (
+                          <Badge variant="outline" className="border-amber-200 text-amber-700 bg-amber-50">
+                            Thu {new Intl.NumberFormat("vi-VN").format(o.totalAmount)}đ
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="border-blue-200 text-blue-700 bg-blue-50">
+                            Không thu tiền
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-xs text-slate-500">
+                        {formatTimeAgo(o.createdAt)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          size="sm"
+                          className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+                          onClick={() => navigate(`/driver/orders/${o.id}`)}
+                        >
+                          Cập nhật
+                          <ArrowRight className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </div>
         </TabsContent>
       </Tabs>
     </div>
-  );
-}
-
-// Component thẻ đơn hàng dùng nội bộ
-function OrderCard({
-  order,
-  status,
-  timeAgo,
-  onClick,
-}: {
-  order: DeliveryOrderResponse;
-  status: string;
-  timeAgo: string;
-  onClick: () => void;
-}) {
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("vi-VN").format(price) + "đ";
-  };
-
-  return (
-    <Card
-      className="border-none shadow-md rounded-[2rem] bg-white overflow-hidden active:scale-95 transition-transform cursor-pointer"
-      onClick={onClick}
-    >
-      <CardContent className="p-5">
-        <div className="flex justify-between items-start mb-4">
-          <div
-            className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${status === "ready" ? "bg-orange-100 text-orange-600" : "bg-blue-100 text-blue-600"}`}
-          >
-            {status === "ready" ? "Sẵn sàng lấy" : "Đang vận chuyển"}
-          </div>
-          <span className="text-xs font-bold text-slate-300">
-            {order.orderCode}
-          </span>
-        </div>
-
-        <div className="space-y-3">
-          <div className="flex gap-3">
-            <div className="h-2 w-2 rounded-full bg-emerald-500 mt-1.5 shrink-0" />
-            <p className="text-sm font-bold text-slate-700 line-clamp-1">
-              {order.storeName || "Cửa hàng Tea4Life"}
-              {order.storeAddress && (
-                <span className="font-normal text-slate-400"> — {order.storeAddress}</span>
-              )}
-            </p>
-          </div>
-          <div className="flex gap-3">
-            <div className="h-2 w-2 rounded-full bg-blue-500 mt-1.5 shrink-0" />
-            <p className="text-sm font-bold text-slate-700 line-clamp-1">
-              {order.receiverName}
-              <span className="font-normal text-slate-400">
-                {" "}— {[order.detail, order.ward, order.province].filter((s) => s && s !== "-").join(", ")}
-              </span>
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-4 pt-4 border-t border-slate-50 flex justify-between items-center text-slate-400">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1">
-              <Clock size={14} />
-              <span className="text-[10px] font-bold">{timeAgo}</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Package size={14} />
-              <span className="text-[10px] font-bold">
-                {order.items?.length || 0} món · {formatPrice(order.totalAmount)}
-              </span>
-            </div>
-          </div>
-          <ChevronRight size={18} />
-        </div>
-      </CardContent>
-    </Card>
   );
 }

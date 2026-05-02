@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { getOrderByIdApi, cancelMyOrderApi } from "@/services/orderApi";
 import type { OrderResponse, OrderStatus } from "@/types/order/OrderResponse";
-import { handleError } from "@/lib/utils";
+import { handleError, getMediaUrl } from "@/lib/utils";
 import { toast } from "sonner";
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
@@ -232,7 +232,7 @@ export default function OrderDetailPage() {
                   <div key={idx} className="flex gap-4 items-start">
                     {item.productImageUrl ? (
                       <img
-                        src={item.productImageUrl}
+                        src={getMediaUrl(item.productImageUrl)}
                         alt={item.productName}
                         className="h-20 w-20 object-cover border border-[#1A4331]/10"
                       />

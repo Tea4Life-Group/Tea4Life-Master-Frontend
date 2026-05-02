@@ -72,7 +72,7 @@ export default function StoreLayout() {
           </button>
         </div>
 
-        <div className="mx-4 h-px bg-gradient-to-r from-transparent via-emerald-300/20 to-transparent" />
+        <div className="mx-4 h-px bg-linear-to-r from-transparent via-emerald-700/50 to-transparent" />
 
         {/* Navigation */}
         <ScrollArea className="flex-1 min-h-0 px-3 py-3">

@@ -137,13 +137,13 @@ export default function Header() {
                     <div className="absolute inset-0 rounded-full animate-[pulse-ring_2s_infinite] bg-[#D2A676] opacity-30 blur-sm pointer-events-none" />
                   )}
 
-                  <div className={`relative flex items-center gap-2 px-6 py-2.5 rounded-full ${link.isHighlighted ? 'bg-gradient-to-r from-[#1A4331] to-[#123023] shadow-[0_4px_15px_rgba(26,67,49,0.5)] border-[1.5px] border-[#D2A676]/40' : link.color} text-sm font-bold hover:scale-110 active:scale-95 transition-all duration-300 overflow-hidden`}>
+                  <div className={`relative flex items-center gap-2 px-6 py-2.5 rounded-full ${link.isHighlighted ? 'bg-linear-to-r from-[#1A4331] to-[#123023] shadow-[0_4px_15px_rgba(26,67,49,0.5)] border-[1.5px] border-[#D2A676]/40' : link.color} text-sm font-bold hover:scale-110 active:scale-95 transition-all duration-300 overflow-hidden`}>
                     
                     {/* Continuous Shimmer Effect */}
                     {link.isHighlighted && (
                        <>
-                         <div className="absolute inset-0 -translate-x-[150%] animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/40 to-transparent skew-x-12 z-0" />
-                         <div className="absolute inset-0 -translate-x-[150%] animate-[shimmer_2.5s_infinite_0.5s] bg-gradient-to-r from-transparent via-[#D2A676]/30 to-transparent skew-x-12 z-0" />
+                         <div className="absolute inset-0 -translate-x-[150%] animate-[shimmer_2s_infinite] bg-linear-to-r from-transparent via-white/40 to-transparent skew-x-12 z-0" />
+                         <div className="absolute inset-0 -translate-x-[150%] animate-[shimmer_2.5s_infinite_0.5s] bg-linear-to-r from-transparent via-[#D2A676]/30 to-transparent skew-x-12 z-0" />
                        </>
                     )}
                     
