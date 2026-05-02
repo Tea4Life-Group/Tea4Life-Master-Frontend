@@ -7,7 +7,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2, MapPin } from "lucide-react";
+import { Edit, Trash2, MapPin, Users, Plus } from "lucide-react";
 import type { StoreResponse } from "@/types/store/StoreResponse";
 import EmptyState from "@/components/custom/EmptyState";
 
@@ -17,6 +17,7 @@ interface Props {
   onOpenCreate: () => void;
   onOpenEdit: (item: StoreResponse) => void;
   onOpenDelete: (item: StoreResponse) => void;
+  onOpenEmployees: (item: StoreResponse) => void;
 }
 
 export default function StoresTableSection({
@@ -25,6 +26,7 @@ export default function StoresTableSection({
   onOpenCreate,
   onOpenEdit,
   onOpenDelete,
+  onOpenEmployees,
 }: Props) {
   if (loading) {
     return (
@@ -81,7 +83,16 @@ export default function StoresTableSection({
                   </div>
                 </TableCell>
                 <TableCell>
-                  {item.employees?.length || 0} người
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 border-emerald-200 font-medium"
+                    onClick={() => onOpenEmployees(item)}
+                  >
+                    <Users className="h-3.5 w-3.5" />
+                    {item.employees?.length || 0} người
+                    <Plus className="h-3.5 w-3.5 text-emerald-500" />
+                  </Button>
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">

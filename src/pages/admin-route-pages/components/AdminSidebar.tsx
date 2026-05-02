@@ -19,6 +19,7 @@ import {
   X,
   Newspaper,
   LibraryBig,
+  Truck,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -62,13 +63,14 @@ const adminGroups: SidebarGroup[] = [
     label: "Nội dung",
     links: [
       { name: "Tin tức", href: "/admin/news", icon: Newspaper },
-      { name: "Chủ đề (Category)", href: "/admin/news-categories", icon: LibraryBig },
+      { name: "Chủ đề", href: "/admin/news-categories", icon: LibraryBig },
     ],
   },
   {
     label: "Hệ thống",
     links: [
       { name: "Cửa hàng", href: "/admin/stores", icon: Store },
+      { name: "Tài xế", href: "/admin/drivers", icon: Truck },
       { name: "Người dùng", href: "/admin/users", icon: Users },
       { name: "Phân quyền", href: "/admin/permissions", icon: ShieldCheck },
       { name: "Chức vụ", href: "/admin/roles", icon: Lock },

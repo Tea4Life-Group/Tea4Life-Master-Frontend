@@ -10,6 +10,7 @@ import LoadingScreen from "@/components/custom/LoadingScreen";
 import RootLayout from "@/layouts/RootLayout";
 import AdminLayout from "@/layouts/AdminLayout";
 import DriverLayout from "@/layouts/DriverLayout";
+import StoreLayout from "@/layouts/StoreLayout";
 
 // ========================================
 // PUBLIC PAGES — import trực tiếp (không lazy, chuyển trang tức thì)
@@ -61,6 +62,7 @@ import AdminStoresPage from "@/pages/admin-route-pages/stores";
 import AdminNewsPage from "@/pages/admin-route-pages/news";
 import AdminNewsEditorPage from "@/pages/admin-route-pages/news/editor";
 import AdminNewsCategoriesPage from "@/pages/admin-route-pages/news-categories";
+import AdminDriversPage from "@/pages/admin-route-pages/drivers";
 
 // ========================================
 // DRIVER PAGES — lazy load theo cụm
@@ -78,6 +80,16 @@ const AdminAuditLogsPage = Loadable(
   lazy(() => import("@/pages/admin-route-pages/audit-log")),
 );
 
+// ========================================
+// STORE STAFF PAGES — lazy load
+// ========================================
+const StoreDashboard = Loadable(
+  lazy(() => import("@/pages/store-route-pages/dashboard")),
+);
+const StoreOrders = Loadable(
+  lazy(() => import("@/pages/store-route-pages/orders")),
+);
+
 // --- 1. NHÓM ROUTE CÔNG KHAI (PUBLIC) ---
 const publicRoutes = [
   { index: true, element: <LandingPage /> },
@@ -89,7 +101,7 @@ const publicRoutes = [
   { path: "news/category/:categorySlug", element: <NewsPage /> },
   { path: "news/:slug", element: <NewsDetailPage /> },
   { path: "news", element: <LandingPage /> },
-  { path: "stores", element: <StoresPage /> },
+  { path: "places", element: <StoresPage /> },
 ];
 
 // --- 2. NHÓM ROUTE KHÁCH HÀNG (CUSTOMER) ---
@@ -133,6 +145,7 @@ const adminRoutes = [
   { path: "news/create", element: <AdminNewsEditorPage /> },
   { path: "news/edit/:id", element: <AdminNewsEditorPage /> },
   { path: "news-categories", element: <AdminNewsCategoriesPage /> },
+  { path: "drivers", element: <AdminDriversPage /> },
 ];
 
 // --- 4. NHÓM ROUTE TÀI XẾ (DRIVER) ---
@@ -141,6 +154,13 @@ const driverRoutes = [
   { path: "dashboard", element: <DriverDashboard /> },
   { path: "orders", element: <DriverOrders /> },
   { path: "orders/:id", element: <DriverOrderDetail /> },
+];
+
+// --- 5. NHÓM ROUTE CỬA HÀNG (STORE STAFF) ---
+const storeRoutes = [
+  { index: true, element: <Navigate to="dashboard" replace /> },
+  { path: "dashboard", element: <StoreDashboard /> },
+  { path: "orders", element: <StoreOrders /> },
 ];
 
 // --- CẤU TRÌNH ROUTER CHÍNH ---
@@ -159,5 +179,10 @@ export const router = createBrowserRouter([
     path: "/driver",
     element: <DriverLayout />,
     children: driverRoutes,
+  },
+  {
+    path: "/stores",
+    element: <StoreLayout />,
+    children: storeRoutes,
   },
 ]);

@@ -19,6 +19,7 @@ import type { UpsertStoreRequest } from "@/types/store/UpsertStoreRequest";
 
 import StoreFormModal from "./components/StoreFormModal";
 import StoresTableSection from "./components/StoresTableSection";
+import StoreEmployeeModal from "./components/StoreEmployeeModal";
 
 export default function AdminStoresPage() {
   const [items, setItems] = useState<StoreResponse[]>([]);
@@ -32,6 +33,10 @@ export default function AdminStoresPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<StoreResponse | null>(null);
+
+  // Employee modal state
+  const [employeeModalOpen, setEmployeeModalOpen] = useState(false);
+  const [selectedStore, setSelectedStore] = useState<StoreResponse | null>(null);
 
   const fetchStores = useCallback(async () => {
     setLoading(true);
@@ -107,6 +112,11 @@ export default function AdminStoresPage() {
     }
   };
 
+  const handleOpenEmployees = (item: StoreResponse) => {
+    setSelectedStore(item);
+    setEmployeeModalOpen(true);
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <AdminPageHeader
@@ -129,6 +139,7 @@ export default function AdminStoresPage() {
         onOpenCreate={handleOpenCreate}
         onOpenEdit={handleOpenEdit}
         onOpenDelete={handleOpenDelete}
+        onOpenEmployees={handleOpenEmployees}
       />
 
       <StoreFormModal
@@ -137,6 +148,13 @@ export default function AdminStoresPage() {
         loading={modalLoading}
         initialData={current}
         onSubmit={handleSubmit}
+      />
+
+      <StoreEmployeeModal
+        isOpen={employeeModalOpen}
+        onClose={() => setEmployeeModalOpen(false)}
+        store={selectedStore}
+        onEmployeeChanged={fetchStores}
       />
 
       <ConfirmationDialog

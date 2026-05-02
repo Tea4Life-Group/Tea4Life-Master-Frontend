@@ -23,7 +23,7 @@ const navLinks = [
   { name: "Tin tức", href: "/news", icon: Newspaper },
   { 
     name: "Cửa hàng", 
-    href: "/stores", 
+    href: "/places", 
     isButton: true, 
     icon: Store,
     color: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-primary/20",

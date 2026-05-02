@@ -6,8 +6,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group.tsx";
 import { CreditCard, MapPin, ChevronLeft, Leaf, Loader2 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/features/auth/useAuth";
-import { getCartApi, clearCartApi } from "@/services/cartApi";
-import { createOrderApi } from "@/services/orderApi";
+import { getCartApi } from "@/services/cartApi";
+import { checkoutOrderApi } from "@/services/orderApi";
 import type { CartResponse } from "@/types/cart/CartResponse";
 import { handleError } from "@/lib/utils";
 import { toast } from "sonner";
@@ -23,6 +23,8 @@ export default function CheckoutPage() {
   const [formData, setFormData] = useState({
     receiverName: "",
     phone: "",
+    province: "",
+    ward: "",
     detail: "",
     paymentMethod: "COD" as "COD" | "BANKING",
   });
@@ -72,21 +74,17 @@ export default function CheckoutPage() {
 
     try {
       setSubmitting(true);
-      const res = await createOrderApi({
-        ...formData,
-        province: "-", // Giả định
-        ward: "-", // Giả định
-        items: cart.items.map(item => ({
-          productId: item.productId,
-          productName: item.productName,
-          selectedOptions: item.selectedOptions,
-          unitPrice: item.unitPrice,
-          quantity: item.quantity
-        }))
+
+      const res = await checkoutOrderApi({
+        receiverName: formData.receiverName,
+        phone: formData.phone,
+        province: formData.province || "-",
+        ward: formData.ward || "-",
+        detail: formData.detail,
+        paymentMethod: formData.paymentMethod,
       });
 
       toast.success("Đặt hàng thành công!");
-      await clearCartApi();
       navigate(`/order/${res.data.data.id}`);
     } catch (error) {
       handleError(error, "Không thể đặt hàng. Vui lòng thử lại.");
@@ -180,6 +178,32 @@ export default function CheckoutPage() {
                     />
                   </div>
                 </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="province" className="text-xs font-bold text-[#1A4331] uppercase tracking-wider">
+                      Tỉnh / Thành phố
+                    </Label>
+                    <Input
+                      id="province"
+                      value={formData.province}
+                      onChange={handleInputChange}
+                      placeholder="TP. Hồ Chí Minh"
+                      className="border-2 border-[#1A4331]/20 bg-[#F8F5F0] rounded-none focus-visible:ring-0 focus-visible:border-[#1A4331] text-sm"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="ward" className="text-xs font-bold text-[#1A4331] uppercase tracking-wider">
+                      Phường / Xã
+                    </Label>
+                    <Input
+                      id="ward"
+                      value={formData.ward}
+                      onChange={handleInputChange}
+                      placeholder="Phường 6"
+                      className="border-2 border-[#1A4331]/20 bg-[#F8F5F0] rounded-none focus-visible:ring-0 focus-visible:border-[#1A4331] text-sm"
+                    />
+                  </div>
+                </div>
                 <div className="space-y-2">
                   <Label htmlFor="detail" className="text-xs font-bold text-[#1A4331] uppercase tracking-wider">
                     Địa chỉ chi tiết
@@ -188,7 +212,7 @@ export default function CheckoutPage() {
                     id="detail"
                     value={formData.detail}
                     onChange={handleInputChange}
-                    placeholder="Số nhà, tên đường, phường/xã..."
+                    placeholder="Số nhà, tên đường..."
                     className="border-2 border-[#1A4331]/20 bg-[#F8F5F0] rounded-none focus-visible:ring-0 focus-visible:border-[#1A4331] text-sm"
                   />
                 </div>
