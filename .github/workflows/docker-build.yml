@@ -84,7 +84,10 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            VITE_BACKEND_BASE_URL=${{ secrets.VITE_BACKEND_BASE_URL }}
+            VITE_GATEWAY_BASE_URL=${{ secrets.VITE_GATEWAY_BASE_URL }}
+            VITE_KEYCLOAK_BASE_URL=${{ secrets.VITE_KEYCLOAK_BASE_URL }}
+            VITE_GOONG_MAPTILES_KEY=${{ secrets.VITE_GOONG_MAPTILES_KEY }}
+            VITE_GOONG_API_KEY=${{ secrets.VITE_GOONG_API_KEY }}
 
   build-portal:
     name: Build Portal
@@ -128,4 +131,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            VITE_BACKEND_BASE_URL=${{ secrets.VITE_BACKEND_BASE_URL }}
+            VITE_GATEWAY_BASE_URL=${{ secrets.VITE_GATEWAY_BASE_URL }}
+            VITE_KEYCLOAK_BASE_URL=${{ secrets.VITE_KEYCLOAK_BASE_URL }}
+            VITE_GOONG_MAPTILES_KEY=${{ secrets.VITE_GOONG_MAPTILES_KEY }}
+            VITE_GOONG_API_KEY=${{ secrets.VITE_GOONG_API_KEY }}
