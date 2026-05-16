@@ -5,8 +5,9 @@ export const useAuth = () => {
 
   return {
     ...auth,
-    isAdmin: auth.role.includes("ROLE_ADMIN"),
-    isDriver: auth.role.includes("ROLE_DRIVER"),
+    isAdmin: auth.role === "ADMIN",
+    isDriver: auth.role === "DRIVER",
+    isStore: auth.role === "STORE",
     isLoading: auth.isLoading || !auth.initialized,
   };
 };

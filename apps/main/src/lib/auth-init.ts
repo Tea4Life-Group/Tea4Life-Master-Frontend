@@ -2,7 +2,7 @@ import keycloak from "./keycloak";
 
 export const initKeycloakSession = async () => {
   const timeout = new Promise((_, reject) =>
-    setTimeout(() => reject(new Error("Keycloak Timeout")), 3000),
+    setTimeout(() => reject(new Error("Keycloak Timeout")), 10000),
   );
 
   return Promise.race([

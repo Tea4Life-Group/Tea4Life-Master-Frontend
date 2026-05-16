@@ -40,41 +40,41 @@ const adminGroups: SidebarGroup[] = [
   {
     label: "Tổng quan",
     links: [
-      { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
-      { name: "Báo cáo", href: "/admin/reports", icon: BarChart3 },
+      { name: "Dashboard", href: "/app/admin/dashboard", icon: LayoutDashboard },
+      { name: "Báo cáo", href: "/app/admin/reports", icon: BarChart3 },
     ],
   },
   {
     label: "Bán hàng",
     links: [
-      { name: "Đơn hàng", href: "/admin/orders", icon: ShoppingCart },
-      { name: "Phiếu giảm giá", href: "/admin/vouchers", icon: Ticket },
+      { name: "Đơn hàng", href: "/app/admin/orders", icon: ShoppingCart },
+      { name: "Phiếu giảm giá", href: "/app/admin/vouchers", icon: Ticket },
     ],
   },
   {
     label: "Sản phẩm",
     links: [
-      { name: "Sản phẩm", href: "/admin/products", icon: Package },
-      { name: "Danh mục", href: "/admin/categories", icon: LayoutGrid },
-      { name: "Tùy chọn SP", href: "/admin/product-options", icon: Settings },
+      { name: "Sản phẩm", href: "/app/admin/products", icon: Package },
+      { name: "Danh mục", href: "/app/admin/categories", icon: LayoutGrid },
+      { name: "Tùy chọn SP", href: "/app/admin/product-options", icon: Settings },
     ],
   },
   {
     label: "Nội dung",
     links: [
-      { name: "Tin tức", href: "/admin/news", icon: Newspaper },
-      { name: "Chủ đề", href: "/admin/news-categories", icon: LibraryBig },
+      { name: "Tin tức", href: "/app/admin/news", icon: Newspaper },
+      { name: "Chủ đề", href: "/app/admin/news-categories", icon: LibraryBig },
     ],
   },
   {
     label: "Hệ thống",
     links: [
-      { name: "Cửa hàng", href: "/admin/stores", icon: Store },
-      { name: "Tài xế", href: "/admin/drivers", icon: Truck },
-      { name: "Người dùng", href: "/admin/users", icon: Users },
-      { name: "Phân quyền", href: "/admin/permissions", icon: ShieldCheck },
-      { name: "Chức vụ", href: "/admin/roles", icon: Lock },
-      { name: "Nhật ký", href: "/admin/audit-logs", icon: Activity },
+      { name: "Cửa hàng", href: "/app/admin/stores", icon: Store },
+      { name: "Tài xế", href: "/app/admin/drivers", icon: Truck },
+      { name: "Người dùng", href: "/app/admin/users", icon: Users },
+      { name: "Phân quyền", href: "/app/admin/permissions", icon: ShieldCheck },
+      { name: "Chức vụ", href: "/app/admin/roles", icon: Lock },
+      { name: "Nhật ký", href: "/app/admin/audit-logs", icon: Activity },
     ],
   },
 ];
@@ -102,7 +102,7 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
     >
       {/* Brand */}
       <div className="px-5 py-4 flex items-center justify-between shrink-0">
-        <Link to="/admin/dashboard" className="flex items-center gap-3">
+        <Link to="/app/admin/dashboard" className="flex items-center gap-3">
           <div className="h-9 w-9 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg shadow-black/10 shrink-0 ring-1 ring-white/10">
             <img
               src="/logo/logo.png"
@@ -191,13 +191,13 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
       {/* Footer */}
       <div className="p-3 border-t border-emerald-300/15 shrink-0">
         <Link
-          to="/"
+          to="/app"
           className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium text-emerald-100/50 hover:bg-white/8 hover:text-white transition-all group"
         >
           <div className="p-1.5 rounded-lg bg-white/10 group-hover:bg-white/15 transition-colors">
             <LogOut className="h-3.5 w-3.5" />
           </div>
-          Quay lại Website
+          Quay lại Hub
         </Link>
       </div>
     </aside>

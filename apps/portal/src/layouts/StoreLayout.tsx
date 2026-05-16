@@ -15,8 +15,8 @@ import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 const storeLinks = [
-  { name: "Tổng quan", href: "/stores/dashboard", icon: LayoutDashboard },
-  { name: "Đơn hàng", href: "/stores/orders", icon: ClipboardList },
+  { name: "Tổng quan", href: "/app/stores/dashboard", icon: LayoutDashboard },
+  { name: "Đơn hàng", href: "/app/stores/orders", icon: ClipboardList },
 ];
 
 export default function StoreLayout() {
@@ -46,7 +46,7 @@ export default function StoreLayout() {
       >
         {/* Brand */}
         <div className="px-5 py-4 flex items-center justify-between shrink-0">
-          <Link to="/stores/dashboard" className="flex items-center gap-3">
+          <Link to="/app/stores/dashboard" className="flex items-center gap-3">
             <div className="h-9 w-9 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg shadow-black/10 shrink-0 ring-1 ring-white/10">
               <img
                 src="/logo/logo.png"
@@ -123,13 +123,13 @@ export default function StoreLayout() {
         {/* Footer */}
         <div className="p-3 border-t border-emerald-300/15 shrink-0">
           <Link
-            to="/"
+            to="/app"
             className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium text-emerald-100/50 hover:bg-white/8 hover:text-white transition-all group"
           >
             <div className="p-1.5 rounded-lg bg-white/10 group-hover:bg-white/15 transition-colors">
               <LogOut className="h-3.5 w-3.5" />
             </div>
-            Quay lại Website
+            Quay lại Hub
           </Link>
         </div>
       </aside>

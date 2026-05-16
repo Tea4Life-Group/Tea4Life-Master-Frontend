@@ -15,8 +15,8 @@ import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 const driverLinks = [
-  { name: "Tổng quan", href: "/driver/dashboard", icon: LayoutDashboard },
-  { name: "Nhiệm vụ", href: "/driver/orders", icon: ClipboardList },
+  { name: "Tổng quan", href: "/app/drivers/dashboard", icon: LayoutDashboard },
+  { name: "Nhiệm vụ", href: "/app/drivers/orders", icon: ClipboardList },
 ];
 
 export default function DriverLayout() {
@@ -46,7 +46,7 @@ export default function DriverLayout() {
       >
         {/* Brand */}
         <div className="px-5 py-4 flex items-center justify-between shrink-0">
-          <Link to="/driver/dashboard" className="flex items-center gap-3">
+          <Link to="/app/drivers/dashboard" className="flex items-center gap-3">
             <div className="h-9 w-9 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center shadow-lg shadow-black/10 shrink-0 ring-1 ring-white/10">
               <Truck className="h-5 w-5 text-emerald-400" />
             </div>
@@ -119,13 +119,13 @@ export default function DriverLayout() {
         {/* Footer */}
         <div className="p-3 border-t border-slate-800 shrink-0">
           <Link
-            to="/"
+            to="/app"
             className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium text-slate-400 hover:bg-white/5 hover:text-slate-200 transition-all group"
           >
             <div className="p-1.5 rounded-lg bg-white/5 group-hover:bg-white/10 transition-colors">
               <LogOut className="h-3.5 w-3.5" />
             </div>
-            Quay lại Website
+            Quay lại Hub
           </Link>
         </div>
       </aside>

@@ -10,6 +10,8 @@ import LoadingScreen from "@/components/custom/LoadingScreen";
 import AdminLayout from "@/layouts/AdminLayout";
 import DriverLayout from "@/layouts/DriverLayout";
 import StoreLayout from "@/layouts/StoreLayout";
+import AuthGuard from "@/components/custom/AuthGuard";
+import AppHubPage from "@/pages/app-hub";
 
 
 
@@ -110,21 +112,25 @@ const storeRoutes = [
 export const router = createBrowserRouter([
   {
     path: "/",
-    element: <Navigate to="/admin" replace />,
+    element: <Navigate to="/app" replace />,
   },
   {
-    path: "/admin",
-    element: <AdminLayout />,
+    path: "/app",
+    element: <AuthGuard><AppHubPage /></AuthGuard>,
+  },
+  {
+    path: "/app/admin",
+    element: <AuthGuard><AdminLayout /></AuthGuard>,
     children: adminRoutes,
   },
   {
-    path: "/driver",
-    element: <DriverLayout />,
+    path: "/app/drivers",
+    element: <AuthGuard><DriverLayout /></AuthGuard>,
     children: driverRoutes,
   },
   {
-    path: "/stores",
-    element: <StoreLayout />,
+    path: "/app/stores",
+    element: <AuthGuard><StoreLayout /></AuthGuard>,
     children: storeRoutes,
   },
 ]);
