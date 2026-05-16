@@ -13,7 +13,7 @@ export default defineConfig(({ mode }) => ({
   },
   server: {
     open: true,
-    port: 3000,
+    port: 3001,
   },
   esbuild:
     mode === "production"

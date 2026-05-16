@@ -45,7 +45,6 @@ const publicRoutes = [
   { path: "news", element: <NewsPage /> },
   { path: "news/category/:categorySlug", element: <NewsPage /> },
   { path: "news/:slug", element: <NewsDetailPage /> },
-  { path: "news", element: <LandingPage /> },
   { path: "places", element: <StoresPage /> },
 ];
 
