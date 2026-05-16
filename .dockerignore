@@ -4,11 +4,6 @@ node_modules/
 .pnp.js
 .pnp.cjs
 
-# ---------- Environment ----------
-.env
-.env.*
-!.env.example
-
 # ---------- Build Outputs ----------
 dist/
 build/
@@ -19,14 +14,8 @@ out/
 # ---------- Turbo ----------
 .turbo/
 
-# ---------- Vite ----------
-*.local
-vite.config.ts.timestamp-*
-
 # ---------- IDE & Editors ----------
-.vscode/*
-!.vscode/settings.json
-!.vscode/extensions.json
+.vscode/
 .idea/
 *.swp
 *.swo
@@ -47,6 +36,10 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# ---------- Git ----------
+.git/
+.gitignore
+
 # ---------- Testing & Coverage ----------
 coverage/
 *.lcov
@@ -59,7 +52,4 @@ coverage/
 .vercel/
 .netlify/
 scratch/
-
-# ---------- Project Files ----------
-README.md
-CLAUDE.md
+.agents/

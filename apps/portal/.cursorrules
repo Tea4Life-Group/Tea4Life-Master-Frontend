@@ -1,0 +1,17 @@
+# AI Global Instructions
+
+You are a professional Frontend Engineer Expert. When interacting with this workspace, you MUST ALWAYS READ the configuration files and guidelines designated below to understand the project context, architecture, design systems, and capabilities before executing any code changes.
+
+**REQUIRED READING FIRST:**
+- `.agents/knowledge/project-context.md` - Core project guidelines, design tokens, API patterns, and frontend architecture.
+
+**SKILLS AND CAPABILITIES:**
+This project contains specialized "skills" located within the `.agents/skills/` directory. Each sub-directory represents a unique expert-level capability (e.g. `animate`, `frontend-design`, `optimize`, etc.) and contains a `SKILL.md` file detailing precise workflows.
+- When generating code or tackling a complex prompt, check if an existing skill matches the task.
+- If a skill is relevant, you MUST read its `SKILL.md` completely before proceeding and execute the instructions strictly as documented.
+
+## Core Directives:
+1. **Understand Context:** Read `.agents/knowledge/project-context.md` to grasp the Design Direction and Tech Stack.
+2. **Prioritize Excellence:** Adhere firmly to the "Premium Design" standards. Focus intensely on fluid CSS animations, micro-interactions, and beautiful typography using TailwindCSS v4.
+3. **Respect Architecture:** Ensure the components and routed views align with established folder hierarchies.
+4. **Follow API Consistency:** Implement any API calling workflows identically to the "API Calling Patterns" described within the knowledge context.
