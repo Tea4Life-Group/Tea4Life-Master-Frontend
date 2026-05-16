@@ -84,7 +84,7 @@ const PaginationComponent: React.FC<PaginationComponentProps> = ({
             </span>
             <Select
               value={pageSize.toString()}
-              onValueChange={(val) => onSizeChange(Number(val))}
+              onValueChange={(val: string) => onSizeChange(Number(val))}
             >
               <SelectTrigger className="w-[80px] h-10 border-emerald-100 rounded-xl bg-slate-50 focus:ring-emerald-500">
                 <SelectValue />
@@ -112,7 +112,7 @@ const PaginationComponent: React.FC<PaginationComponentProps> = ({
             </span>
           </Button>
 
-          {paginationRange.map((pageNumber, index) => {
+          {paginationRange.map((pageNumber: number | string, index: number) => {
             if (pageNumber === DOTS) {
               return (
                 <span

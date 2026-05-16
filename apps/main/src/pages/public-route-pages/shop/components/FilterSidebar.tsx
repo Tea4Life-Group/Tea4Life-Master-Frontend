@@ -68,7 +68,7 @@ export default function FilterSidebar({
         </Label>
         <Select
           value={categoryId}
-          onValueChange={(value) => onUpdateParams({ categoryId: value })}
+          onValueChange={(value: string) => onUpdateParams({ categoryId: value })}
         >
           <SelectTrigger className="border-2 border-[#1A4331]/20 bg-[#F8F5F0] text-[#1A4331] text-sm focus:ring-0 focus:ring-offset-0 rounded-none h-9">
             <SelectValue placeholder="Chọn danh mục" />
@@ -100,7 +100,7 @@ export default function FilterSidebar({
         </Label>
         <Select
           value={priceRange}
-          onValueChange={(value) => onUpdateParams({ priceRange: value })}
+          onValueChange={(value: string) => onUpdateParams({ priceRange: value })}
         >
           <SelectTrigger className="border-2 border-[#1A4331]/20 bg-[#F8F5F0] text-[#1A4331] text-sm focus:ring-0 focus:ring-offset-0 rounded-none h-9">
             <SelectValue placeholder="Chọn mức giá" />

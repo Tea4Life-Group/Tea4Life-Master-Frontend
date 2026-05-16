@@ -40,7 +40,7 @@ const PaginationSection: React.FC<PaginationSectionProps> = ({
         <span>Hiển thị</span>
         <Select
           value={size.toString()}
-          onValueChange={(value) => onSizeChange(Number(value))}
+          onValueChange={(value: string) => onSizeChange(Number(value))}
         >
           <SelectTrigger className="h-8 w-[70px] bg-white border-emerald-200 focus:ring-emerald-500/20">
             <SelectValue placeholder={size} />

@@ -265,7 +265,7 @@ export default function ImageCropperComponent({
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+    <Dialog open={open} onOpenChange={(v: boolean) => !v && onClose()}>
       <DialogContent
         showCloseButton={false}
         className="sm:max-w-md rounded-3xl p-0 overflow-hidden border-0 gap-0"

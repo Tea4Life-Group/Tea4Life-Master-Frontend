@@ -148,7 +148,7 @@ export function QuickOrderModal({ productId, isOpen, onClose }: QuickOrderModalP
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={(open: boolean) => !open && onClose()}>
       <DialogContent className="w-[95vw] sm:w-[90vw] sm:!max-w-[90vw] md:!max-w-4xl lg:!max-w-5xl p-0 overflow-hidden bg-[#F8F5F0] border-none rounded-3xl" showCloseButton={true}>
         <DialogHeader className="sr-only">
           <DialogTitle>Đặt món nhanh</DialogTitle>

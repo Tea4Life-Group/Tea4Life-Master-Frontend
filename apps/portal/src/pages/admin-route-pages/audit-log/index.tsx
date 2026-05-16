@@ -75,7 +75,7 @@ export default function AdminAuditLogsPage() {
         {/* Entity filter */}
         <Select
           value={filterType}
-          onValueChange={(val) => handleFilterChange("type", val)}
+          onValueChange={(val: string) => handleFilterChange("type", val)}
         >
           <SelectTrigger className="w-[170px] h-9 border-slate-200 rounded-lg bg-white focus:ring-emerald-500/20 shadow-sm text-sm">
             <SelectValue placeholder="Thực thể" />
@@ -94,7 +94,7 @@ export default function AdminAuditLogsPage() {
         {/* Action filter */}
         <Select
           value={filterAction}
-          onValueChange={(val) => handleFilterChange("action", val)}
+          onValueChange={(val: string) => handleFilterChange("action", val)}
         >
           <SelectTrigger className="w-[170px] h-9 border-slate-200 rounded-lg bg-white focus:ring-emerald-500/20 shadow-sm text-sm">
             <SelectValue placeholder="Hành động" />

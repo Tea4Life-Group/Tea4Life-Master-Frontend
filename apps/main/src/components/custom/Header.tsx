@@ -179,7 +179,7 @@ export default function Header() {
             >
               <Link
                 to="/cart"
-                onClick={(e) => {
+                onClick={(e: React.MouseEvent) => {
                   if (!isAuthenticated) {
                     e.preventDefault();
                     setShowLoginDialog(true);

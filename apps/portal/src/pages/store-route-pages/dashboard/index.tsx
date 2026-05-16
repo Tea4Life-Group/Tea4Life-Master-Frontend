@@ -97,7 +97,7 @@ export default function StoreDashboard() {
 
         <Select
           value={selectedStore?.id || ""}
-          onValueChange={(val) => {
+          onValueChange={(val: string) => {
             const found = stores.find((s) => s.id === val);
             if (found) setSelectedStore(found);
           }}
