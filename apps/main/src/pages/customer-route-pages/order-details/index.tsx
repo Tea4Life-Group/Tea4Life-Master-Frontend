@@ -118,7 +118,7 @@ export default function OrderDetailPage() {
             recordedAt: data.recordedAt,
           });
         }
-      } catch (err) {
+      } catch {
         // ignore
       }
     };

@@ -61,6 +61,19 @@ export default function CheckoutPage() {
     paymentMethod: "COD" as "COD" | "BANKING",
   });
 
+  const applyAddress = (addr: AddressResponse) => {
+    setFormData((prev) => ({
+      ...prev,
+      receiverName: addr.receiverName,
+      phone: addr.phone,
+      province: addr.province,
+      ward: addr.ward,
+      detail: addr.detail,
+      latitude: addr.latitude,
+      longitude: addr.longitude,
+    }));
+  };
+
   useEffect(() => {
     setFormData((prev) => ({
       ...prev,
@@ -105,18 +118,7 @@ export default function CheckoutPage() {
     fetchData();
   }, [navigate]);
 
-  const applyAddress = (addr: AddressResponse) => {
-    setFormData((prev) => ({
-      ...prev,
-      receiverName: addr.receiverName,
-      phone: addr.phone,
-      province: addr.province,
-      ward: addr.ward,
-      detail: addr.detail,
-      latitude: addr.latitude,
-      longitude: addr.longitude,
-    }));
-  };
+
 
   const handleSelectAddress = (addr: AddressResponse) => {
     setSelectedAddressId(addr.id);

@@ -73,12 +73,14 @@ export function QuickOrderModal({
 
   useEffect(() => {
     if (isOpen && productId) {
-      fetchProductDetail(productId);
+      setTimeout(() => fetchProductDetail(productId), 0);
     } else {
       // Reset state on close
-      setProduct(null);
-      setQuantity(1);
-      setSelectedOptions({});
+      setTimeout(() => {
+        setProduct(null);
+        setQuantity(1);
+        setSelectedOptions({});
+      }, 0);
     }
   }, [isOpen, productId, fetchProductDetail]);
 
@@ -179,7 +181,7 @@ export function QuickOrderModal({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={(open: boolean) => !open && onClose()}>
       <DialogContent
         className="p-0 border-none rounded-3xl overflow-y-auto bg-[#F8F5F0] max-w-[95vw] sm:max-w-3xl md:max-w-4xl lg:max-w-5xl gap-0 max-h-[90dvh] customized-scrollbar"
         showCloseButton={true}
@@ -207,7 +209,7 @@ export function QuickOrderModal({
                   alt={product.name}
                   className="w-full h-full object-cover"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent flex flex-col justify-end p-5 md:p-8">
+                <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/30 to-transparent flex flex-col justify-end p-5 md:p-8">
                   <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold font-sans text-white leading-tight drop-shadow-md pr-4">
                     {product.name}
                   </h2>

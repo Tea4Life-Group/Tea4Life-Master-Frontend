@@ -33,6 +33,41 @@ export const goongApiV2 = {
     );
     return res.json();
   },
+
+  // 4. Tìm vị trí từ địa chỉ (lấy prediction đầu tiên rồi lấy place detail)
+  resolveAddress: async (address: string) => {
+    const autocompleteRes = await goongApiV2.autocomplete(address);
+    const firstPrediction = autocompleteRes?.predictions?.[0];
+
+    if (!firstPrediction?.place_id) {
+      return null;
+    }
+
+    const detailRes = await goongApiV2.placeDetail(firstPrediction.place_id);
+    const location = detailRes?.result?.geometry?.location;
+
+    if (!location) {
+      return null;
+    }
+
+    return {
+      latitude: location.lat,
+      longitude: location.lng,
+      formatted_address:
+        detailRes?.result?.formatted_address || firstPrediction.description,
+    };
+  },
+
+  // 5. Lấy tuyến đường giữa 2 tọa độ
+  directions: async (
+    origin: { lat: number; lng: number },
+    destination: { lat: number; lng: number },
+  ) => {
+    const res = await fetch(
+      `https://rsapi.goong.io/Direction?origin=${origin.lat},${origin.lng}&destination=${destination.lat},${destination.lng}&vehicle=car&api_key=${GOONG_API_KEY}`,
+    );
+    return res.json();
+  },
 };
 
 // ============== Định nghĩa Type cho API V2 Response =============
