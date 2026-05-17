@@ -16,6 +16,7 @@ import {
   Newspaper,
   ChevronRight,
   Leaf,
+  BookOpenText,
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/features/store";
 import { fetchCart, clearLastAction } from "@/features/cart/cartSlice";
@@ -41,6 +42,13 @@ const navLinks = [
     icon: Store,
     isSecondary: true,
     description: "Tìm cửa hàng",
+  },
+  {
+    name: "Blog",
+    href: "/blog",
+    icon: BookOpenText,
+    isSecondary: true,
+    description: "Cộng đồng",
   },
 ];
 
