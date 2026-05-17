@@ -92,7 +92,7 @@ export default function DriverDashboard() {
         </div>
         <Button
           className="gap-2 bg-slate-900 hover:bg-slate-800 text-white"
-          onClick={() => navigate("/driver/orders")}
+          onClick={() => navigate("/app/drivers/orders")}
         >
           Mở nhiệm vụ
           <ArrowRight className="h-4 w-4" />

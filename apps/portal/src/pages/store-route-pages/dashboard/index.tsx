@@ -166,7 +166,7 @@ export default function StoreDashboard() {
             </div>
             <Button
               className="gap-2 bg-emerald-600 hover:bg-emerald-700"
-              onClick={() => navigate("/stores/orders")}
+              onClick={() => navigate("/app/stores/orders")}
             >
               Mở đơn hàng
               <ArrowRight className="h-4 w-4" />
