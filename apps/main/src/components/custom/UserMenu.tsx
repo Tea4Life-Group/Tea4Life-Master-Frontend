@@ -8,7 +8,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { LogOut, MapPin, PackageSearch, UserCircle } from "lucide-react";
+import { LogOut, MapPin, PackageSearch, UserCircle, ChevronDown } from "lucide-react";
 import { getNameInitials } from "@/lib/utils";
 import keycloak from "@/lib/keycloak";
 
@@ -31,9 +31,9 @@ export function UserMenu({ user }: UserMenuProps) {
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className="relative flex items-center gap-2 px-2 rounded-none hover:bg-[#8A9A7A]/10 focus-visible:ring-0 focus-visible:ring-offset-0"
+          className="relative flex items-center gap-2.5 px-2 pr-3 h-10 rounded-xl hover:bg-[#F8F5F0] focus-visible:ring-0 focus-visible:ring-offset-0 transition-all duration-300"
         >
-          <div className="h-8 w-8 bg-[#F8F5F0] flex items-center justify-center overflow-hidden">
+          <div className="h-8 w-8 rounded-lg bg-linear-to-br from-[#1A4331] to-[#2a5c47] flex items-center justify-center overflow-hidden ring-1 ring-[#1A4331]/10 shadow-sm">
             {user.avatar ? (
               <img
                 src={user.avatar}
@@ -41,67 +41,84 @@ export function UserMenu({ user }: UserMenuProps) {
                 className="h-full w-full object-cover"
               />
             ) : (
-              <span className="text-xs font-bold text-[#1A4331]">
+              <span className="text-[11px] font-bold text-white">
                 {getNameInitials(user.name)}
               </span>
             )}
           </div>
-          <span className="text-sm font-bold text-[#1A4331] hidden lg:block uppercase tracking-wide">
+          <span className="text-sm font-semibold text-[#1A4331] hidden lg:block max-w-[120px] truncate">
             {user.name || user.email}
           </span>
+          <ChevronDown className="w-3.5 h-3.5 text-[#8A9A7A] hidden lg:block" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
-        className="w-48 rounded-none border-2 border-[#1A4331] bg-[#F8F5F0] shadow-[2px_2px_0px_0px_#1A4331] p-0"
+        className="w-56 rounded-xl border border-[#1A4331]/8 bg-white/95 backdrop-blur-xl shadow-[0_10px_40px_rgba(26,67,49,0.12)] p-1"
         align="end"
+        sideOffset={8}
         forceMount
       >
-        <DropdownMenuLabel className="font-normal px-3 py-2 bg-[#1A4331]/5">
-          <div className="flex flex-col space-y-0.5">
-            <p className="text-xs font-bold leading-none text-[#1A4331]">
-              {user.name || "Người dùng"}
-            </p>
-            {user.email && (
-              <p className="text-[10px] leading-none text-[#8A9A7A] mt-0.5">
-                {user.email}
+        <DropdownMenuLabel className="font-normal px-3 py-3 rounded-lg bg-[#F8F5F0]/60 mb-1">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg bg-linear-to-br from-[#1A4331] to-[#2a5c47] flex items-center justify-center overflow-hidden shrink-0">
+              {user.avatar ? (
+                <img
+                  src={user.avatar}
+                  alt={user.name}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <span className="text-xs font-bold text-white">
+                  {getNameInitials(user.name)}
+                </span>
+              )}
+            </div>
+            <div className="flex flex-col min-w-0">
+              <p className="text-sm font-bold text-[#1A4331] truncate">
+                {user.name || "Người dùng"}
               </p>
-            )}
+              {user.email && (
+                <p className="text-[11px] text-[#8A9A7A] truncate mt-0.5">
+                  {user.email}
+                </p>
+              )}
+            </div>
           </div>
         </DropdownMenuLabel>
-        <DropdownMenuSeparator className="bg-[#1A4331]/15 h-[2px] m-0" />
-        <div className="p-1">
+
+        <div className="space-y-0.5">
           <DropdownMenuItem
             onClick={() => navigate("/profile")}
-            className="cursor-pointer rounded-none px-2.5 py-1.5 text-[#1A4331] font-medium text-xs focus:bg-[#1A4331] focus:text-[#F8F5F0] transition-colors"
+            className="cursor-pointer rounded-lg px-3 py-2.5 text-[#1A4331] font-medium text-sm focus:bg-[#F8F5F0] focus:text-[#1A4331] transition-colors"
           >
-            <UserCircle className="mr-1.5 h-3.5 w-3.5" />
+            <UserCircle className="mr-2.5 h-4 w-4 text-[#8A9A7A]" />
             <span>Thông tin cá nhân</span>
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => navigate("/profile/address")}
-            className="cursor-pointer rounded-none px-2.5 py-1.5 text-[#1A4331] font-medium text-xs focus:bg-[#1A4331] focus:text-[#F8F5F0] transition-colors"
+            className="cursor-pointer rounded-lg px-3 py-2.5 text-[#1A4331] font-medium text-sm focus:bg-[#F8F5F0] focus:text-[#1A4331] transition-colors"
           >
-            <MapPin className="mr-1.5 h-3.5 w-3.5" />
+            <MapPin className="mr-2.5 h-4 w-4 text-[#8A9A7A]" />
             <span>Địa chỉ</span>
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => navigate("/order")}
-            className="cursor-pointer rounded-none px-2.5 py-1.5 text-[#1A4331] font-medium text-xs focus:bg-[#1A4331] focus:text-[#F8F5F0] transition-colors"
+            className="cursor-pointer rounded-lg px-3 py-2.5 text-[#1A4331] font-medium text-sm focus:bg-[#F8F5F0] focus:text-[#1A4331] transition-colors"
           >
-            <PackageSearch className="mr-1.5 h-3.5 w-3.5" />
+            <PackageSearch className="mr-2.5 h-4 w-4 text-[#8A9A7A]" />
             <span>Đơn hàng của tôi</span>
           </DropdownMenuItem>
         </div>
-        <DropdownMenuSeparator className="bg-[#1A4331]/15 h-[2px] m-0" />
-        <div className="p-1">
-          <DropdownMenuItem
-            onClick={handleLogout}
-            className="cursor-pointer rounded-none px-2.5 py-1.5 text-red-600 font-medium text-xs focus:bg-red-600 focus:text-white transition-colors"
-          >
-            <LogOut className="mr-1.5 h-3.5 w-3.5" />
-            <span>Đăng xuất</span>
-          </DropdownMenuItem>
-        </div>
+
+        <DropdownMenuSeparator className="bg-[#1A4331]/6 my-1" />
+        
+        <DropdownMenuItem
+          onClick={handleLogout}
+          className="cursor-pointer rounded-lg px-3 py-2.5 text-red-500 font-medium text-sm focus:bg-red-50 focus:text-red-600 transition-colors"
+        >
+          <LogOut className="mr-2.5 h-4 w-4" />
+          <span>Đăng xuất</span>
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

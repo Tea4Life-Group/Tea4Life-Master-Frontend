@@ -1,47 +1,70 @@
-import { useState, useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { UserMenu } from "@/components/custom/UserMenu";
 import { RequireLoginDialog } from "@/components/custom/RequireLoginDialog";
 import { useAuth } from "@/features/auth/useAuth";
 import { getMediaUrl } from "@/lib/utils";
 import keycloak from "@/lib/keycloak";
-import { Menu, X, ShoppingCart, Store, UserCircle, LogOut, ShoppingBag, Home, Newspaper } from "lucide-react";
+import {
+  ShoppingCart,
+  Store,
+  UserCircle,
+  LogOut,
+  ShoppingBag,
+  Home,
+  Newspaper,
+  ChevronRight,
+  Leaf,
+} from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/features/store";
 import { fetchCart, clearLastAction } from "@/features/cart/cartSlice";
 
 const navLinks = [
-  { name: "Trang chủ", href: "/", icon: Home },
-  { 
-    name: "Thực đơn", 
-    href: "/shop", 
-    isButton: true, 
-    isHighlighted: true,
+  { name: "Trang chủ", href: "/", icon: Home, description: "Về trang chủ" },
+  {
+    name: "Thực đơn",
+    href: "/shop",
     icon: ShoppingBag,
-    color: "bg-[#1A4331] text-white hover:bg-[#1A4331]/90 shadow-[#1A4331]/20",
+    isPrimary: true,
+    description: "Khám phá menu",
   },
-  { name: "Tin tức", href: "/news", icon: Newspaper },
-  { 
-    name: "Cửa hàng", 
-    href: "/places", 
-    isButton: true, 
+  {
+    name: "Tin tức",
+    href: "/news",
+    icon: Newspaper,
+    description: "Đọc tin mới",
+  },
+  {
+    name: "Cửa hàng",
+    href: "/places",
     icon: Store,
-    color: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-primary/20",
+    isSecondary: true,
+    description: "Tìm cửa hàng",
   },
 ];
 
 export default function Header() {
   const dispatch = useAppDispatch();
   const { cart, lastAction } = useAppSelector((state) => state.cart);
-  
+  const location = useLocation();
+
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showLoginDialog, setShowLoginDialog] = useState(false);
   const [isBouncing, setIsBouncing] = useState(false);
   const [bubbleMessage, setBubbleMessage] = useState<string | null>(null);
+  const [scrolled, setScrolled] = useState(false);
   const bounceTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { isAuthenticated, fullName, email, avatarUrl, initialized } =
     useAuth();
+
+  // Scroll detection for shadow effect
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 8);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -52,20 +75,20 @@ export default function Header() {
   useEffect(() => {
     if (lastAction.type) {
       const type = lastAction.type;
-      
+
       // Use setTimeout to avoid synchronous cascading renders
       const timer = setTimeout(() => {
         if (type === "add") {
           setIsBouncing(true);
         }
-        
+
         const messages = {
           add: "+ Đã thêm vào giỏ",
           remove: "- Đã xóa món",
           clear: "× Đã làm trống giỏ",
           update: "✓ Đã cập nhật",
         };
-        
+
         setBubbleMessage(messages[type] || null);
       }, 0);
 
@@ -80,170 +103,290 @@ export default function Header() {
     }
   }, [lastAction.timestamp, lastAction.type, dispatch]);
 
-  const handleLogin = () => keycloak.login();
-  const handleLogout = () =>
-    keycloak.logout({ redirectUri: window.location.origin });
+  // Close mobile menu on route change
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
+
+  // Lock body scroll when mobile menu is open
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [mobileMenuOpen]);
+
+  const handleLogin = useCallback(() => keycloak.login(), []);
+  const handleLogout = useCallback(
+    () => keycloak.logout({ redirectUri: window.location.origin }),
+    []
+  );
+
+  const isActivePath = (href: string) => {
+    if (href === "/") return location.pathname === "/";
+    return location.pathname.startsWith(href);
+  };
 
   return (
-    <header className="sticky top-0 z-50 backdrop-blur-md bg-background/95 border-b border-border shadow-sm transition-all duration-300">
-      <style
-        dangerouslySetInnerHTML={{
-          __html: `
-            @keyframes shimmer {
-              0% { transform: translateX(-150%) skewX(12deg); }
-              100% { transform: translateX(150%) skewX(12deg); }
-            }
-            @keyframes pulse-ring {
-              0% { transform: scale(0.95); opacity: 0.8; box-shadow: 0 0 0 0 rgba(210, 166, 118, 0.7); }
-              70% { transform: scale(1); opacity: 1; box-shadow: 0 0 0 10px rgba(210, 166, 118, 0); }
-              100% { transform: scale(0.95); opacity: 0.8; box-shadow: 0 0 0 0 rgba(210, 166, 118, 0); }
-            }
-            @keyframes bounce-hard {
-              0%, 100% { transform: translateY(-25%); animation-timing-function: cubic-bezier(0.8, 0, 1, 1); }
-              50% { transform: translateY(0); animation-timing-function: cubic-bezier(0, 0, 0.2, 1); }
-            }
-          `
+    <>
+      <header
+        className={`sticky top-0 z-50 transition-all duration-500 ease-out ${
+          scrolled
+            ? "bg-white/80 backdrop-blur-xl shadow-[0_1px_3px_rgba(26,67,49,0.08),0_8px_24px_rgba(26,67,49,0.04)]"
+            : "bg-white/95 backdrop-blur-md"
+        }`}
+        style={{
+          borderBottom: scrolled
+            ? "1px solid rgba(26,67,49,0.06)"
+            : "1px solid rgba(26,67,49,0.08)",
         }}
-      />
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex h-20 items-center justify-between">
-          {/* Logo Section */}
-          <Link to="/" className="flex items-center gap-3 shrink-0 group">
-            <div className="relative">
-              <div className="absolute -inset-1 bg-primary/20 rounded-full blur opacity-25 group-hover:opacity-50 transition duration-300" />
-              <img
-                src="/logo/logo.png"
-                alt="Tea4Life Logo"
-                className="relative h-12 w-12 object-contain rounded-xl shadow-sm border border-border/10"
-              />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-xl font-black text-[#1A4331] leading-none tracking-tight">
-                Tea4Life
-              </span>
-              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] mt-1">
-                Premium Tea
-              </span>
-            </div>
-          </Link>
+      >
+        {/* Decorative top accent line */}
+        <div className="h-[2px] bg-linear-to-r from-transparent via-[#D2A676] to-transparent opacity-60" />
 
-          {/* Desktop Navigation */}
-          <nav className="hidden items-center gap-1 lg:gap-2 md:flex p-1.5 rounded-full bg-secondary/20">
-            {navLinks.map((link) => (
-              link.isButton ? (
-                <Link key={link.name} to={link.href} className="group/btn relative inline-block mx-1">
-                  {/* Overdrive Background Pulse Ring */}
-                  {link.isHighlighted && (
-                    <div className="absolute inset-0 rounded-full animate-[pulse-ring_2s_infinite] bg-[#D2A676] opacity-30 blur-sm pointer-events-none" />
-                  )}
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex h-[72px] items-center justify-between gap-4">
+            {/* ──── Logo Section ──── */}
+            <Link to="/" className="flex items-center gap-3 shrink-0 group">
+              <div className="relative">
+                {/* Glow ring on hover */}
+                <div className="absolute -inset-2 rounded-2xl bg-linear-to-br from-[#D2A676]/0 to-[#1A4331]/0 group-hover:from-[#D2A676]/15 group-hover:to-[#1A4331]/10 transition-all duration-500 blur-sm" />
+                <img
+                  src="/logo/logo.png"
+                  alt="Tea4Life Logo"
+                  className="relative h-11 w-11 object-contain rounded-xl shadow-sm ring-1 ring-[#1A4331]/8 group-hover:ring-[#D2A676]/30 group-hover:shadow-md group-hover:scale-105 transition-all duration-300"
+                />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[22px] font-extrabold text-[#1A4331] leading-none tracking-tight">
+                  Tea4Life
+                </span>
+                <span className="text-[9px] font-semibold text-[#D2A676] uppercase tracking-[0.25em] mt-0.5 flex items-center gap-1">
+                  <Leaf className="w-2.5 h-2.5" />
+                  Premium Tea
+                </span>
+              </div>
+            </Link>
 
-                  <div className={`relative flex items-center gap-2 px-6 py-2.5 rounded-full ${link.isHighlighted ? 'bg-linear-to-r from-[#1A4331] to-[#123023] shadow-[0_4px_15px_rgba(26,67,49,0.5)] border-[1.5px] border-[#D2A676]/40' : link.color} text-sm font-bold hover:scale-110 active:scale-95 transition-all duration-300 overflow-hidden`}>
-                    
-                    {/* Continuous Shimmer Effect */}
-                    {link.isHighlighted && (
-                       <>
-                         <div className="absolute inset-0 -translate-x-[150%] animate-[shimmer_2s_infinite] bg-linear-to-r from-transparent via-white/40 to-transparent skew-x-12 z-0" />
-                         <div className="absolute inset-0 -translate-x-[150%] animate-[shimmer_2.5s_infinite_0.5s] bg-linear-to-r from-transparent via-[#D2A676]/30 to-transparent skew-x-12 z-0" />
-                       </>
-                    )}
-                    
-                    {link.icon && <link.icon className={`h-4 w-4 relative z-10 ${link.isHighlighted ? 'text-[#D2A676]' : ''}`} />}
-                    <span className={`relative z-10 ${link.isHighlighted ? 'text-white tracking-wide' : ''}`}>
-                      {link.name}
-                    </span>
-                  </div>
-                </Link>
-              ) : (
-                <Link
-                  key={link.name}
-                  to={link.href}
-                  className="relative px-5 py-2.5 rounded-full text-sm font-semibold text-muted-foreground hover:text-[#1A4331] hover:bg-white/50 transition-all duration-300 group"
-                >
-                  <div className="flex items-center gap-2">
-                    {link.icon && <link.icon className="h-4 w-4 opacity-50 group-hover:opacity-100 transition-opacity" />}
-                    {link.name}
-                  </div>
-                  <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#1A4331] opacity-0 group-hover:opacity-100 transition-opacity" />
-                </Link>
-              )
-            ))}
-          </nav>
+            {/* ──── Desktop Navigation ──── */}
+            <nav className="hidden md:flex items-center">
+              <div className="flex items-center gap-1 p-1 rounded-full bg-[#F8F5F0]/80 ring-1 ring-[#1A4331]/6">
+                {navLinks.map((link) => {
+                  const isActive = isActivePath(link.href);
 
-          {/* Actions Area */}
-          <div className="flex items-center gap-4">
-            <div 
-              className="relative group flex items-center py-2 h-full"
-              onMouseEnter={() => {
-                if (isAuthenticated) dispatch(fetchCart());
-              }}
-            >
-              <Link
-                to="/cart"
-                onClick={(e: React.MouseEvent) => {
-                  if (!isAuthenticated) {
-                    e.preventDefault();
-                    setShowLoginDialog(true);
-                  }
-                }}
-                className={`relative p-2 text-[#1A4331] group-hover:bg-[#1A4331] group-hover:text-[#F8F5F0] border-2 border-transparent group-hover:border-[#1A4331] transition-colors z-10 ${
-                  isBouncing ? "animate-bounce" : ""
-                }`}
-              >
-                <ShoppingCart className="h-6 w-6" />
-                {cart && cart.totalItems > 0 && (
-                  <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center bg-[#8A9A7A] border-2 border-[#1A4331] text-[10px] font-bold text-[#F8F5F0]">
-                    {cart.totalItems}
-                  </span>
-                )}
-              </Link>
-              
-              {/* Bubble Feedback Message */}
-              {bubbleMessage && (
-                <div className="absolute top-12 -right-2 bg-[#8A9A7A] text-[#F8F5F0] text-[11px] font-bold px-3 py-1.5 shadow-[2px_2px_0px_#1A4331] border-2 border-[#1A4331] z-60 animate-in fade-in zoom-in slide-in-from-top-2 duration-300 pointer-events-none whitespace-nowrap uppercase tracking-tighter">
-                  {bubbleMessage}
-                </div>
-              )}
-              
-              {/* Dropdown Popover */}
-              {isAuthenticated && cart && cart.totalItems > 0 && (
-                <div className="absolute top-12 right-0 mt-2 w-[320px] bg-white border-2 border-[#1A4331] shadow-[4px_4px_0px_#1A4331] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 flex flex-col pointer-events-auto cursor-default">
-                  <div className="p-3 border-b-2 border-[#1A4331]/10 bg-[#F8F5F0]">
-                    <p className="text-xs font-bold text-[#1A4331] opacity-70 uppercase tracking-wide">Sản phẩm mới thêm</p>
-                  </div>
-                  <div className="flex flex-col">
-                    {cart.items.slice(0, 3).map(item => (
-                      <div key={item.id} className="flex gap-3 p-3 border-b border-[#1A4331]/5 hover:bg-[#F8F5F0] transition-colors">
-                        <img src={item.productImageUrl ? getMediaUrl(item.productImageUrl) : "/placeholder.svg"} alt={item.productName} className="w-12 h-12 object-cover border border-[#1A4331]/10 bg-white" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[13px] font-bold text-[#1A4331] truncate">{item.productName}</p>
-                          <p className="text-xs font-semibold text-[#8A9A7A] mt-1 flex justify-between">
-                            <span>{new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(item.subTotal)}</span>
-                            <span className="text-[#1A4331]">x{item.quantity}</span>
-                          </p>
+                  if (link.isPrimary) {
+                    return (
+                      <Link
+                        key={link.name}
+                        to={link.href}
+                        className="relative group/cta mx-0.5"
+                      >
+                        <div
+                          className={`relative flex items-center gap-2 px-6 py-2 rounded-full text-sm font-bold
+                          bg-linear-to-r from-[#1A4331] to-[#1d4e39] text-white
+                          shadow-[0_2px_8px_rgba(26,67,49,0.3)]
+                          hover:shadow-[0_4px_16px_rgba(26,67,49,0.4)]
+                          hover:from-[#1d4e39] hover:to-[#226644]
+                          active:scale-[0.97]
+                          transition-all duration-300 overflow-hidden`}
+                        >
+                          {/* Shimmer sweep */}
+                          <div className="absolute inset-0 -translate-x-full group-hover/cta:translate-x-full bg-linear-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 ease-out" />
+                          <link.icon className="h-4 w-4 relative z-10 text-[#D2A676]" />
+                          <span className="relative z-10 tracking-wide">
+                            {link.name}
+                          </span>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                  {cart.totalItems > 3 && (
-                    <div className="p-2 text-center bg-[#F8F5F0] border-t border-[#1A4331]/10">
-                      <p className="text-[11px] font-bold text-[#8A9A7A]">Xem thêm {cart.totalItems - 3} món trong giỏ...</p>
-                    </div>
-                  )}
-                  <div className="p-3">
-                    <Link to="/cart" className="block w-full py-2 bg-[#1A4331] text-white text-center text-sm font-bold hover:bg-[#8A9A7A] transition-colors cursor-pointer border-2 border-transparent hover:border-[#1A4331]">
-                      XEM THÊM GIỎ HÀNG
-                    </Link>
-                  </div>
-                </div>
-              )}
-            </div>
+                      </Link>
+                    );
+                  }
 
-            {/* PHẦN THAY ĐỔI: Login Button vs UserMenu  */}
-            <div className="hidden sm:block">
-              {!initialized ? (
-                <div className="h-8 w-8 animate-pulse bg-[#8A9A7A] border-2 border-[#1A4331]" />
-              ) : isAuthenticated ? (
-                <div className="pixel-border border-2 shadow-[2px_2px_0px_#1A4331]">
+                  if (link.isSecondary) {
+                    return (
+                      <Link
+                        key={link.name}
+                        to={link.href}
+                        className="relative group/sec mx-0.5"
+                      >
+                        <div
+                          className={`flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold transition-all duration-300
+                          ${
+                            isActive
+                              ? "bg-[#D2A676]/15 text-[#1A4331] ring-1 ring-[#D2A676]/30"
+                              : "text-[#1A4331]/80 hover:bg-[#D2A676]/10 hover:text-[#1A4331]"
+                          }
+                        `}
+                        >
+                          <link.icon
+                            className={`h-4 w-4 transition-colors duration-300 ${
+                              isActive
+                                ? "text-[#D2A676]"
+                                : "text-[#8A9A7A] group-hover/sec:text-[#D2A676]"
+                            }`}
+                          />
+                          <span>{link.name}</span>
+                        </div>
+                      </Link>
+                    );
+                  }
+
+                  return (
+                    <Link
+                      key={link.name}
+                      to={link.href}
+                      className={`relative px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 group/link
+                        ${
+                          isActive
+                            ? "bg-white text-[#1A4331] shadow-sm ring-1 ring-[#1A4331]/8"
+                            : "text-[#1A4331]/60 hover:text-[#1A4331] hover:bg-white/60"
+                        }
+                      `}
+                    >
+                      <div className="flex items-center gap-2">
+                        <link.icon
+                          className={`h-4 w-4 transition-all duration-300 ${
+                            isActive
+                              ? "text-[#D2A676]"
+                              : "text-[#8A9A7A]/70 group-hover/link:text-[#8A9A7A]"
+                          }`}
+                        />
+                        {link.name}
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </nav>
+
+            {/* ──── Actions Area ──── */}
+            <div className="flex items-center gap-2">
+              {/* Cart */}
+              <div
+                className="relative group/cart flex items-center"
+                onMouseEnter={() => {
+                  if (isAuthenticated) dispatch(fetchCart());
+                }}
+              >
+                <Link
+                  to="/cart"
+                  onClick={(e: React.MouseEvent) => {
+                    if (!isAuthenticated) {
+                      e.preventDefault();
+                      setShowLoginDialog(true);
+                    }
+                  }}
+                  className={`relative flex items-center justify-center w-10 h-10 rounded-xl text-[#1A4331] 
+                    hover:bg-[#1A4331] hover:text-white 
+                    transition-all duration-300 group-hover/cart:shadow-md ${
+                      isBouncing ? "animate-bounce" : ""
+                    }`}
+                >
+                  <ShoppingCart className="h-5 w-5" />
+                  {cart && cart.totalItems > 0 && (
+                    <span className="absolute -top-1 -right-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#D2A676] text-[10px] font-bold text-white px-1 shadow-sm ring-2 ring-white">
+                      {cart.totalItems > 99 ? "99+" : cart.totalItems}
+                    </span>
+                  )}
+                </Link>
+
+                {/* Bubble Feedback Message */}
+                {bubbleMessage && (
+                  <div className="absolute top-full mt-2 right-0 bg-[#1A4331] text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-lg z-60 animate-in fade-in zoom-in-95 slide-in-from-top-1 duration-200 pointer-events-none whitespace-nowrap">
+                    {bubbleMessage}
+                    <div className="absolute -top-1 right-3 w-2 h-2 bg-[#1A4331] rotate-45" />
+                  </div>
+                )}
+
+                {/* Cart Dropdown Popover */}
+                {isAuthenticated && cart && cart.totalItems > 0 && (
+                  <div className="absolute top-full mt-3 right-0 w-[340px] bg-white/95 backdrop-blur-xl rounded-2xl border border-[#1A4331]/8 shadow-[0_10px_40px_rgba(26,67,49,0.12)] opacity-0 invisible group-hover/cart:opacity-100 group-hover/cart:visible translate-y-1 group-hover/cart:translate-y-0 transition-all duration-300 z-50 overflow-hidden pointer-events-auto cursor-default">
+                    {/* Popover Header */}
+                    <div className="px-4 py-3 border-b border-[#1A4331]/6 bg-linear-to-r from-[#F8F5F0] to-white">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-bold text-[#1A4331]/60 uppercase tracking-wider">
+                          Giỏ hàng
+                        </p>
+                        <span className="text-[10px] font-semibold text-[#D2A676] bg-[#D2A676]/10 px-2 py-0.5 rounded-full">
+                          {cart.totalItems} món
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Items */}
+                    <div className="max-h-[240px] overflow-y-auto">
+                      {cart.items.slice(0, 4).map((item, index) => (
+                        <div
+                          key={item.id}
+                          className={`flex gap-3 p-3 hover:bg-[#F8F5F0]/60 transition-colors ${
+                            index < Math.min(cart.items.length, 4) - 1
+                              ? "border-b border-[#1A4331]/4"
+                              : ""
+                          }`}
+                        >
+                          <img
+                            src={
+                              item.productImageUrl
+                                ? getMediaUrl(item.productImageUrl)
+                                : "/placeholder.svg"
+                            }
+                            alt={item.productName}
+                            className="w-12 h-12 object-cover rounded-xl bg-[#F8F5F0] ring-1 ring-[#1A4331]/6"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[13px] font-semibold text-[#1A4331] truncate leading-tight">
+                              {item.productName}
+                            </p>
+                            <div className="flex items-center justify-between mt-1.5">
+                              <span className="text-xs font-bold text-[#D2A676]">
+                                {new Intl.NumberFormat("vi-VN", {
+                                  style: "currency",
+                                  currency: "VND",
+                                }).format(item.subTotal)}
+                              </span>
+                              <span className="text-[11px] font-medium text-[#8A9A7A] bg-[#8A9A7A]/10 px-1.5 py-0.5 rounded">
+                                x{item.quantity}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {cart.totalItems > 4 && (
+                      <div className="px-4 py-2 text-center border-t border-[#1A4331]/4 bg-[#F8F5F0]/40">
+                        <p className="text-[11px] font-medium text-[#8A9A7A]">
+                          + {cart.totalItems - 4} món khác
+                        </p>
+                      </div>
+                    )}
+
+                    {/* CTA */}
+                    <div className="p-3 bg-linear-to-r from-[#F8F5F0]/60 to-white border-t border-[#1A4331]/4">
+                      <Link
+                        to="/cart"
+                        className="flex items-center justify-center gap-2 w-full py-2.5 bg-[#1A4331] text-white text-sm font-bold rounded-xl hover:bg-[#1d4e39] transition-colors shadow-sm"
+                      >
+                        Xem giỏ hàng
+                        <ChevronRight className="w-4 h-4" />
+                      </Link>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Divider */}
+              <div className="hidden sm:block w-px h-6 bg-[#1A4331]/10" />
+
+              {/* Auth Section */}
+              <div className="hidden sm:flex items-center">
+                {!initialized ? (
+                  <div className="h-9 w-9 rounded-xl bg-[#F8F5F0] animate-pulse" />
+                ) : isAuthenticated ? (
                   <UserMenu
                     user={{
                       name: fullName || "",
@@ -251,87 +394,192 @@ export default function Header() {
                       avatar: getMediaUrl(avatarUrl),
                     }}
                   />
-                </div>
-              ) : (
-                <Button
-                  onClick={handleLogin}
-                  className="bg-transparent border-2 border-[#1A4331] text-[#1A4331] hover:bg-[#1A4331] hover:text-[#F8F5F0] pixel-button"
-                >
-                  ĐĂNG NHẬP
-                </Button>
-              )}
-            </div>
+                ) : (
+                  <Button
+                    onClick={handleLogin}
+                    className="bg-[#F8F5F0] border border-[#1A4331]/12 text-[#1A4331] hover:bg-[#1A4331] hover:text-white hover:border-[#1A4331] font-semibold text-sm px-5 h-9 rounded-xl transition-all duration-300 shadow-none hover:shadow-md"
+                  >
+                    Đăng nhập
+                  </Button>
+                )}
+              </div>
 
-            <button
-              className="md:hidden p-2 text-[#1A4331] pixel-button border-2 bg-white"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            >
-              {mobileMenuOpen ? (
-                <X className="h-6 w-6" />
-              ) : (
-                <Menu className="h-6 w-6" />
-              )}
-            </button>
+              {/* Mobile Menu Toggle */}
+              <button
+                className="md:hidden relative flex items-center justify-center w-10 h-10 rounded-xl text-[#1A4331] hover:bg-[#F8F5F0] transition-all duration-300"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                aria-label={mobileMenuOpen ? "Đóng menu" : "Mở menu"}
+              >
+                <div className="relative w-5 h-5">
+                  <span
+                    className={`absolute left-0 block h-[2px] w-5 bg-[#1A4331] rounded-full transition-all duration-300 ease-out ${
+                      mobileMenuOpen
+                        ? "top-[9px] rotate-45"
+                        : "top-[3px] rotate-0"
+                    }`}
+                  />
+                  <span
+                    className={`absolute left-0 top-[9px] block h-[2px] w-5 bg-[#1A4331] rounded-full transition-all duration-300 ease-out ${
+                      mobileMenuOpen ? "opacity-0 scale-x-0" : "opacity-100"
+                    }`}
+                  />
+                  <span
+                    className={`absolute left-0 block h-[2px] w-5 bg-[#1A4331] rounded-full transition-all duration-300 ease-out ${
+                      mobileMenuOpen
+                        ? "top-[9px] -rotate-45"
+                        : "top-[15px] rotate-0"
+                    }`}
+                  />
+                </div>
+              </button>
+            </div>
           </div>
         </div>
+      </header>
 
-        {/* Mobile Navigation */}
-        {mobileMenuOpen && (
-          <div className="border-t-4 border-[#1A4331] py-4 md:hidden bg-[#F8F5F0]">
-            <nav className="flex flex-col gap-4">
-              {!isAuthenticated && (
+      {/* ──── Mobile Menu Overlay ──── */}
+      <div
+        className={`fixed inset-0 z-40 md:hidden transition-all duration-300 ${
+          mobileMenuOpen
+            ? "opacity-100 visible"
+            : "opacity-0 invisible pointer-events-none"
+        }`}
+      >
+        {/* Backdrop */}
+        <div
+          className="absolute inset-0 bg-[#1A4331]/20 backdrop-blur-sm"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+
+        {/* Panel */}
+        <div
+          className={`absolute top-[74px] right-0 left-0 bottom-0 bg-white overflow-y-auto transition-all duration-300 ease-out ${
+            mobileMenuOpen
+              ? "translate-y-0 opacity-100"
+              : "-translate-y-4 opacity-0"
+          }`}
+        >
+          <div className="p-5 pb-32">
+            {/* Auth Header for Mobile (when not logged in) */}
+            {!isAuthenticated && (
+              <div className="mb-6 p-5 rounded-2xl bg-linear-to-br from-[#1A4331] to-[#1d4e39] text-white">
+                <p className="text-sm font-medium text-white/70 mb-2">
+                  Chào mừng bạn đến với
+                </p>
+                <p className="text-xl font-bold mb-4">Tea4Life</p>
                 <Button
                   onClick={handleLogin}
-                  className="mx-2 bg-[#1A4331] text-[#F8F5F0] pixel-button"
+                  className="w-full bg-white text-[#1A4331] hover:bg-[#F8F5F0] font-bold rounded-xl h-11"
                 >
-                  ĐĂNG NHẬP NGAY
+                  Đăng nhập ngay
                 </Button>
-              )}
+              </div>
+            )}
 
-              {navLinks.map((link) => (
-                <Link
-                  key={link.name}
-                  to={link.href}
-                  className={`mx-4 px-4 py-4 flex items-center gap-4 text-base font-bold rounded-2xl transition-all ${
-                    link.isButton 
-                      ? `${link.color} text-white shadow-lg shadow-primary/10` 
-                      : "text-foreground hover:bg-[#1A4331]/5"
-                  }`}
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <div className={`p-2 rounded-xl scale-110 ${link.isButton ? "bg-white/10" : "bg-[#1A4331]/5 text-[#1A4331]"}`}>
-                    {link.icon && <link.icon className="h-6 w-6" />}
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="leading-none">{link.name}</span>
-                    <span className="text-[10px] text-muted-foreground font-medium mt-1 uppercase tracking-widest">Khám phá ngay</span>
-                  </div>
-                </Link>
-              ))}
+            {/* Auth Header (logged in) */}
+            {isAuthenticated && (
+              <div className="mb-6 p-4 rounded-2xl bg-[#F8F5F0] flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center overflow-hidden ring-1 ring-[#1A4331]/8 shrink-0">
+                  {avatarUrl ? (
+                    <img
+                      src={getMediaUrl(avatarUrl)}
+                      alt={fullName || ""}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <UserCircle className="w-6 h-6 text-[#8A9A7A]" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-[#1A4331] truncate">
+                    {fullName || "Người dùng"}
+                  </p>
+                  <p className="text-xs text-[#8A9A7A] truncate">{email}</p>
+                </div>
+              </div>
+            )}
 
-              {isAuthenticated && (
-                <>
-                  <div className="h-1 bg-[#1A4331] mx-2 my-2 opacity-50" />
-                  <div className="px-2 space-y-2">
-                    <Link
-                      to="/profile"
-                      className="flex items-center gap-3 py-2 px-2 text-sm font-bold text-[#1A4331] hover:bg-[#1A4331] hover:text-[#F8F5F0] uppercase"
-                      onClick={() => setMobileMenuOpen(false)}
+            {/* Navigation Links */}
+            <nav className="space-y-1.5">
+              {navLinks.map((link, index) => {
+                const isActive = isActivePath(link.href);
+                return (
+                  <Link
+                    key={link.name}
+                    to={link.href}
+                    className={`flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 group/mobile ${
+                      isActive
+                        ? "bg-[#1A4331] text-white shadow-md"
+                        : "text-[#1A4331] hover:bg-[#F8F5F0]"
+                    }`}
+                    onClick={() => setMobileMenuOpen(false)}
+                    style={{
+                      animationDelay: `${index * 50}ms`,
+                    }}
+                  >
+                    <div
+                      className={`flex items-center justify-center w-10 h-10 rounded-xl transition-colors ${
+                        isActive
+                          ? "bg-white/15"
+                          : "bg-[#F8F5F0] group-hover/mobile:bg-[#1A4331]/5"
+                      }`}
                     >
-                      <UserCircle className="h-5 w-5" /> HỒ SƠ
-                    </Link>
-                    <button
-                      onClick={handleLogout}
-                      className="flex items-center gap-3 py-2 px-2 text-sm font-bold text-red-600 w-full hover:bg-red-600 hover:text-white uppercase"
-                    >
-                      <LogOut className="h-5 w-5" /> ĐĂNG XUẤT
-                    </button>
-                  </div>
-                </>
-              )}
+                      <link.icon
+                        className={`h-5 w-5 ${
+                          isActive ? "text-[#D2A676]" : "text-[#8A9A7A]"
+                        }`}
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <span className="text-sm font-bold block">
+                        {link.name}
+                      </span>
+                      <span
+                        className={`text-[11px] font-medium mt-0.5 block ${
+                          isActive ? "text-white/60" : "text-[#8A9A7A]"
+                        }`}
+                      >
+                        {link.description}
+                      </span>
+                    </div>
+                    <ChevronRight
+                      className={`w-4 h-4 transition-transform group-hover/mobile:translate-x-0.5 ${
+                        isActive ? "text-white/40" : "text-[#1A4331]/20"
+                      }`}
+                    />
+                  </Link>
+                );
+              })}
             </nav>
+
+            {/* Mobile User Actions */}
+            {isAuthenticated && (
+              <>
+                <div className="my-5 h-px bg-[#1A4331]/8" />
+                <div className="space-y-1.5">
+                  <Link
+                    to="/profile"
+                    className="flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold text-[#1A4331] hover:bg-[#F8F5F0] transition-colors"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <UserCircle className="h-5 w-5 text-[#8A9A7A]" />
+                    Thông tin cá nhân
+                  </Link>
+                  <button
+                    onClick={() => {
+                      handleLogout();
+                      setMobileMenuOpen(false);
+                    }}
+                    className="flex items-center gap-3 w-full px-4 py-3 rounded-2xl text-sm font-semibold text-red-500 hover:bg-red-50 transition-colors"
+                  >
+                    <LogOut className="h-5 w-5" />
+                    Đăng xuất
+                  </button>
+                </div>
+              </>
+            )}
           </div>
-        )}
+        </div>
       </div>
 
       <RequireLoginDialog
@@ -340,6 +588,6 @@ export default function Header() {
         title="Yêu cầu đăng nhập"
         description="Vui lòng đăng nhập để xem giỏ hàng của bạn nhé!"
       />
-    </header>
+    </>
   );
 }
