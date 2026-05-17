@@ -129,3 +129,23 @@ export const completeDriverOrderApi = async (id: string) => {
     `/order-service/driver/orders/${id}/complete`,
   );
 };
+
+/** Post driver location (driver -> server) */
+export const postDriverLocationApi = async (
+  id: string,
+  data: { latitude: number; longitude: number; accuracy?: number },
+) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return await axiosClient.post<ApiResponse<any>>(
+    `/order-service/driver/orders/${id}/location`,
+    data,
+  );
+};
+
+/** Get latest driver location for an order */
+export const getDriverLocationLatestApi = async (id: string) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return await axiosClient.get<ApiResponse<any>>(
+    `/order-service/driver/orders/${id}/location/latest`,
+  );
+};

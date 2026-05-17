@@ -84,7 +84,7 @@ const PaginationComponent: React.FC<PaginationComponentProps> = ({
             </span>
             <Select
               value={pageSize.toString()}
-              onValueChange={(val: string) => onSizeChange(Number(val))}
+              onValueChange={(val) => onSizeChange(Number(val))}
             >
               <SelectTrigger className="w-[80px] h-10 border-emerald-100 rounded-xl bg-slate-50 focus:ring-emerald-500">
                 <SelectValue />

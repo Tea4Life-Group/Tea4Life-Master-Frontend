@@ -48,6 +48,7 @@ export interface OrderResponse {
   note?: string | null;
   createdAt: string;
   items: OrderItemResponse[];
+  checkoutUrl?: string | null; // PayOS payment link (only when paymentMethod === "BANKING")
 }
 
 // ============================================================
@@ -114,4 +115,14 @@ export interface DeliveryOrderResponse {
   totalAmount: number;
   createdAt: string;
   items: DeliveryOrderItemResponse[];
+}
+
+export interface DriverLocationResponse {
+  id?: string | null;
+  orderId?: string | null;
+  driverKeycloakId?: string | null;
+  latitude: number;
+  longitude: number;
+  accuracy?: number | null;
+  recordedAt?: string | null;
 }

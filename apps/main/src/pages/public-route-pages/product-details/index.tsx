@@ -12,6 +12,9 @@ import {
   ChevronLeft,
   Leaf,
   Loader2,
+  MessageSquareText,
+  ThumbsUp,
+  Share2,
 } from "lucide-react";
 import {
   Breadcrumb,
@@ -23,13 +26,24 @@ import {
 } from "@/components/ui/breadcrumb.tsx";
 
 import { getProductByIdApi, getProductsApi } from "@/services/productApi";
+import { getLatestNewsApi } from "@/services/newsApi";
 import type { ProductDetailResponse } from "@/types/product/ProductDetailResponse";
 import type { ProductSummaryResponse } from "@/types/product/ProductSummaryResponse";
+import type { NewsSummaryResponse } from "@/types/news/NewsSummaryResponse";
 import { getMediaUrl, handleError } from "@/lib/utils";
 import { useAuth } from "@/features/auth/useAuth";
 import { RequireLoginDialog } from "@/components/custom/RequireLoginDialog";
 import { addCartItemApi } from "@/services/cartApi";
+import {
+  createBlogReviewCommentApi,
+  createMyBlogReviewApi,
+  getBlogReviewCommentsApi,
+  getPublicBlogReviewsApi,
+  shareBlogReviewApi,
+  toggleBlogReviewLikeApi,
+} from "@/services/blogApi";
 import type { CartItemOptionSelectionRequest } from "@/types/cart/CartItemOptionSelectionRequest";
+import type { BlogReviewResponse } from "@/types/blog/BlogReviewResponse";
 import { toast } from "sonner";
 import { useAppDispatch } from "@/features/store";
 import { fetchCart, setLastAction } from "@/features/cart/cartSlice";
@@ -60,6 +74,57 @@ export default function ProductDetail() {
     Record<string, string[]>
   >({});
   const [note, setNote] = useState("");
+  const [reviews, setReviews] = useState<BlogReviewResponse[]>([]);
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [reviewTotal, setReviewTotal] = useState(0);
+  const [avgRating, setAvgRating] = useState(0);
+  const [reviewTitle, setReviewTitle] = useState("");
+  const [reviewContent, setReviewContent] = useState("");
+  const [reviewRating, setReviewRating] = useState(5);
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [latestNews, setLatestNews] = useState<NewsSummaryResponse[]>([]);
+  const [newsLoading, setNewsLoading] = useState(false);
+  const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
+  const [commentMap, setCommentMap] = useState<Record<string, { id: string; authorEmail: string; content: string }[]>>({});
+  const [submittingCommentFor, setSubmittingCommentFor] = useState<string | null>(null);
+  const [likingReviewId, setLikingReviewId] = useState<string | null>(null);
+  const [sharingReviewId, setSharingReviewId] = useState<string | null>(null);
+
+  const fetchProductReviews = useCallback(async (productId: string) => {
+    try {
+      setReviewLoading(true);
+      const res = await getPublicBlogReviewsApi({
+        productId,
+        page: 0,
+        size: 6,
+      });
+      const payload = res.data.data;
+      setReviews(payload?.content || []);
+      setReviewTotal(payload?.totalElements || 0);
+      const currentReviews = payload?.content || [];
+      const computedAvg = currentReviews.length
+        ? currentReviews.reduce((acc, item) => acc + item.rating, 0) /
+          currentReviews.length
+        : 0;
+      setAvgRating(computedAvg);
+    } catch (error) {
+      handleError(error, "Không thể tải đánh giá sản phẩm.");
+    } finally {
+      setReviewLoading(false);
+    }
+  }, []);
+
+  const fetchLatestNews = useCallback(async () => {
+    try {
+      setNewsLoading(true);
+      const res = await getLatestNewsApi();
+      setLatestNews((res.data.data || []).slice(0, 3));
+    } catch (error) {
+      handleError(error, "Không thể tải bài blog mới.");
+    } finally {
+      setNewsLoading(false);
+    }
+  }, []);
 
   const fetchProductDetail = useCallback(async () => {
     if (!id) return;
@@ -101,17 +166,23 @@ export default function ProductDetail() {
         );
         setRelatedProducts(related.slice(0, 4));
       }
+
+      await fetchProductReviews(String(productData.id));
     } catch (error) {
       handleError(error, "Không thể tải chi tiết sản phẩm.");
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, fetchProductReviews]);
 
   useEffect(() => {
     fetchProductDetail();
     window.scrollTo(0, 0); // Scroll to top when changing product
   }, [fetchProductDetail]);
+
+  useEffect(() => {
+    fetchLatestNews();
+  }, [fetchLatestNews]);
 
   const handleOptionToggle = (
     optionId: string,
@@ -231,6 +302,113 @@ export default function ProductDetail() {
     setShowQuickOrderModal(true);
   };
 
+  const handleSubmitReview = async () => {
+    if (!isAuthenticated) {
+      setShowLoginDialog(true);
+      return;
+    }
+
+    if (!product) return;
+    try {
+      setSubmittingReview(true);
+      const normalizedTitle = reviewTitle.trim();
+      const normalizedContent = reviewContent.trim();
+      await createMyBlogReviewApi({
+        productId: String(product.id),
+        productName: product.name,
+        title: normalizedTitle || undefined,
+        summary: normalizedContent ? normalizedContent.slice(0, 140) : undefined,
+        content: normalizedContent || undefined,
+        rating: reviewRating,
+        thumbnailUrl: product.imageUrl || undefined,
+      });
+
+      toast.success("Đã gửi đánh giá thành công.");
+      setReviewTitle("");
+      setReviewContent("");
+      setReviewRating(5);
+      await fetchProductReviews(String(product.id));
+    } catch (error) {
+      handleError(error, "Không thể gửi đánh giá.");
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
+
+  const handleLoadComments = async (reviewId: string) => {
+    try {
+      const res = await getBlogReviewCommentsApi(reviewId, { page: 0, size: 5 });
+      const comments = res.data.data?.content || [];
+      setCommentMap((prev) => ({
+        ...prev,
+        [reviewId]: comments.map((c) => ({
+          id: c.id,
+          authorEmail: c.authorEmail,
+          content: c.content,
+        })),
+      }));
+    } catch (error) {
+      handleError(error, "Không thể tải bình luận.");
+    }
+  };
+
+  const handleSubmitComment = async (reviewId: string) => {
+    if (!isAuthenticated) {
+      setShowLoginDialog(true);
+      return;
+    }
+    const content = (commentInputs[reviewId] || "").trim();
+    if (!content) {
+      toast.warning("Vui lòng nhập nội dung bình luận.");
+      return;
+    }
+    try {
+      setSubmittingCommentFor(reviewId);
+      await createBlogReviewCommentApi(reviewId, { content });
+      setCommentInputs((prev) => ({ ...prev, [reviewId]: "" }));
+      await handleLoadComments(reviewId);
+      await fetchProductReviews(String(product?.id || ""));
+      toast.success("Đã thêm bình luận.");
+    } catch (error) {
+      handleError(error, "Không thể gửi bình luận.");
+    } finally {
+      setSubmittingCommentFor(null);
+    }
+  };
+
+  const handleToggleLike = async (reviewId: string) => {
+    if (!isAuthenticated) {
+      setShowLoginDialog(true);
+      return;
+    }
+    try {
+      setLikingReviewId(reviewId);
+      await toggleBlogReviewLikeApi(reviewId);
+      await fetchProductReviews(String(product?.id || ""));
+    } catch (error) {
+      handleError(error, "Không thể like bài review.");
+    } finally {
+      setLikingReviewId(null);
+    }
+  };
+
+  const handleShareReview = async (reviewId: string) => {
+    if (!isAuthenticated) {
+      setShowLoginDialog(true);
+      return;
+    }
+    try {
+      setSharingReviewId(reviewId);
+      await shareBlogReviewApi(reviewId, { channel: "web" });
+      await fetchProductReviews(String(product?.id || ""));
+      toast.success("Đã ghi nhận lượt chia sẻ.");
+    } catch (error) {
+      handleError(error, "Không thể chia sẻ bài review.");
+    } finally {
+      setSharingReviewId(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#F8F5F0] flex items-center justify-center">
@@ -338,13 +516,23 @@ export default function ProductDetail() {
                 {Array.from({ length: 5 }).map((_, i) => (
                   <Star
                     key={i}
-                    className={`h-4 w-4 fill-[#d97743] text-[#d97743]`}
+                    className={`h-4 w-4 ${
+                      i < Math.round(avgRating)
+                        ? "fill-[#d97743] text-[#d97743]"
+                        : "text-[#d97743]/30"
+                    }`}
                   />
                 ))}
               </div>
               <span className="text-sm text-[#d97743] font-medium bg-white px-3 py-1.5 rounded-full shadow-sm">
-                5.0 Đánh giá
+                {avgRating > 0 ? avgRating.toFixed(1) : "0.0"} ({reviewTotal} đánh giá)
               </span>
+              <a
+                href="#product-reviews"
+                className="text-sm font-semibold px-4 py-1.5 rounded-full bg-[#F8F5F0] text-[#5c4033] border border-[#5c4033]/10 hover:border-[#d97743] transition-colors"
+              >
+                Viết review
+              </a>
             </div>
 
             {/* Price */}
@@ -542,6 +730,200 @@ export default function ProductDetail() {
               </div>
             )}
           </div>
+        </div>
+
+        <div
+          id="product-reviews"
+          className="mt-20 bg-white rounded-[2rem] p-8 md:p-10 shadow-sm border border-[#5c4033]/5"
+        >
+          <div className="mb-6 pb-4 border-b border-[#5c4033]/10">
+            <h3 className="text-2xl font-bold text-[#5c4033]">
+              Đánh giá sản phẩm ({reviewTotal})
+            </h3>
+          </div>
+
+          <div className="grid lg:grid-cols-2 gap-8">
+            <div className="space-y-3">
+              <p className="text-sm font-bold text-[#5c4033]">Viết đánh giá mới</p>
+              <input
+                value={reviewTitle}
+                onChange={(e) => setReviewTitle(e.target.value)}
+                placeholder="Tiêu đề đánh giá"
+                className="w-full rounded-2xl border border-[#5c4033]/15 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#d97743]/30"
+              />
+              <textarea
+                value={reviewContent}
+                onChange={(e) => setReviewContent(e.target.value)}
+                placeholder="Chia sẻ cảm nhận của bạn về sản phẩm..."
+                className="w-full h-28 rounded-2xl border border-[#5c4033]/15 px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#d97743]/30"
+              />
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-[#5c4033]">Điểm:</span>
+                {Array.from({ length: 5 }).map((_, index) => {
+                  const value = index + 1;
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setReviewRating(value)}
+                      className="p-0.5"
+                    >
+                      <Star
+                        className={`h-5 w-5 ${
+                          value <= reviewRating
+                            ? "fill-[#d97743] text-[#d97743]"
+                            : "text-[#d97743]/30"
+                        }`}
+                      />
+                    </button>
+                  );
+                })}
+              </div>
+              <Button
+                onClick={handleSubmitReview}
+                disabled={submittingReview}
+                className="bg-[#5c4033] hover:bg-[#d97743] text-white rounded-full px-6"
+              >
+                {submittingReview ? "Đang gửi..." : "Gửi đánh giá"}
+              </Button>
+            </div>
+
+            <div className="space-y-3">
+              {reviewLoading ? (
+                <div className="py-10 flex justify-center">
+                  <Loader2 className="h-6 w-6 animate-spin text-[#5c4033]" />
+                </div>
+              ) : reviews.length === 0 ? (
+                <div className="text-sm text-[#8A9A7A] py-10 text-center border border-dashed border-[#5c4033]/20 rounded-2xl">
+                  Chưa có đánh giá nào cho sản phẩm này.
+                </div>
+              ) : (
+                reviews.map((review) => (
+                  <div
+                    key={review.id}
+                    className="border border-[#5c4033]/10 rounded-2xl p-4 bg-[#F8F5F0]/60"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="font-bold text-[#5c4033]">{review.title}</p>
+                      <span className="text-xs text-[#8A9A7A]">{review.authorEmail}</span>
+                    </div>
+                    <div className="mt-1 flex items-center gap-1">
+                      {Array.from({ length: 5 }).map((_, idx) => (
+                        <Star
+                          key={idx}
+                          className={`h-3.5 w-3.5 ${
+                            idx < review.rating
+                              ? "fill-[#d97743] text-[#d97743]"
+                              : "text-[#d97743]/30"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <p className="mt-2 text-sm text-[#5c4033]/80 whitespace-pre-line">
+                      {review.summary || review.content}
+                    </p>
+                    <div className="mt-3 flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleLike(review.id)}
+                        disabled={likingReviewId === review.id}
+                        className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs border ${
+                          review.likedByMe
+                            ? "bg-[#1A4331] text-white border-[#1A4331]"
+                            : "bg-white text-[#5c4033] border-[#5c4033]/20"
+                        }`}
+                      >
+                        <ThumbsUp className="h-3.5 w-3.5" />
+                        {review.totalLikes || 0}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleShareReview(review.id)}
+                        disabled={sharingReviewId === review.id}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs border bg-white text-[#5c4033] border-[#5c4033]/20"
+                      >
+                        <Share2 className="h-3.5 w-3.5" />
+                        {review.totalShares || 0}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleLoadComments(review.id)}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs border bg-white text-[#5c4033] border-[#5c4033]/20"
+                      >
+                        <MessageSquareText className="h-3.5 w-3.5" />
+                        {review.totalComments || 0}
+                      </button>
+                    </div>
+                    <div className="mt-3 space-y-2">
+                      {(commentMap[review.id] || []).map((comment) => (
+                        <div
+                          key={comment.id}
+                          className="text-xs bg-white border border-[#5c4033]/10 rounded-xl px-3 py-2"
+                        >
+                          <span className="font-semibold">{comment.authorEmail}: </span>
+                          <span>{comment.content}</span>
+                        </div>
+                      ))}
+                      <div className="flex items-center gap-2">
+                        <input
+                          value={commentInputs[review.id] || ""}
+                          onChange={(e) =>
+                            setCommentInputs((prev) => ({
+                              ...prev,
+                              [review.id]: e.target.value,
+                            }))
+                          }
+                          placeholder="Viết bình luận..."
+                          className="flex-1 rounded-xl border border-[#5c4033]/15 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#d97743]/30"
+                        />
+                        <Button
+                          onClick={() => handleSubmitComment(review.id)}
+                          disabled={submittingCommentFor === review.id}
+                          className="h-8 rounded-full px-3 text-xs bg-[#5c4033] hover:bg-[#d97743]"
+                        >
+                          Gửi
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-20 bg-white rounded-[2rem] p-8 md:p-10 shadow-sm border border-[#5c4033]/5">
+          <div className="flex items-center justify-between gap-3 mb-6 pb-4 border-b border-[#5c4033]/10">
+            <h3 className="text-2xl font-bold text-[#5c4033]">Bài blog liên quan</h3>
+            <Link
+              to="/news"
+              className="text-sm font-semibold px-4 py-2 rounded-full bg-[#F8F5F0] text-[#5c4033] border border-[#5c4033]/10"
+            >
+              Xem tất cả
+            </Link>
+          </div>
+          {newsLoading ? (
+            <div className="py-10 flex justify-center">
+              <Loader2 className="h-6 w-6 animate-spin text-[#5c4033]" />
+            </div>
+          ) : latestNews.length === 0 ? (
+            <div className="text-sm text-[#8A9A7A] py-10 text-center border border-dashed border-[#5c4033]/20 rounded-2xl">
+              Chưa có bài blog nào.
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-3 gap-4">
+              {latestNews.map((news) => (
+                <Link
+                  key={news.id}
+                  to={`/news/${news.slug}`}
+                  className="border border-[#5c4033]/10 rounded-2xl p-4 bg-[#F8F5F0]/60 hover:bg-[#F8F5F0] transition-colors"
+                >
+                  <p className="text-xs text-[#d97743] font-semibold">{news.categoryName}</p>
+                  <p className="font-bold text-[#5c4033] mt-2 line-clamp-2">{news.title}</p>
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Related Products */}

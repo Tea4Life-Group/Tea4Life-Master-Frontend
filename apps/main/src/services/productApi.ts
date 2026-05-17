@@ -38,3 +38,22 @@ export const getRandomProductsApi = async () => {
     "/product-service/public/products/random-items",
   );
 };
+
+export const getMyFavoritesApi = async (params?: { page?: number; size?: number }) => {
+  return await axiosClient.get<ApiResponse<PageResponse<ProductSummaryResponse>>>(
+    "/product-service/products/favorites",
+    { params }
+  );
+};
+
+export const addFavoriteApi = async (productId: string) => {
+  return await axiosClient.post<ApiResponse<string>>(
+    `/product-service/products/favorites/${productId}`
+  );
+};
+
+export const removeFavoriteApi = async (productId: string) => {
+  return await axiosClient.delete<ApiResponse<string>>(
+    `/product-service/products/favorites/${productId}`
+  );
+};

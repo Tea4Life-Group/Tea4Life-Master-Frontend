@@ -8,4 +8,5 @@ export interface CheckoutOrderRequest {
   longitude?: number;
   paymentMethod: "COD" | "BANKING";
   voucherCode?: string | null;
+  shippingFee?: number;
 }

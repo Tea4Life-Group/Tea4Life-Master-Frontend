@@ -178,7 +178,7 @@ const CartPage = () => {
 
   const subtotal = cart?.totalAmount || 0;
   // Giả sử phí vận chuyển tĩnh hoặc miễn phí trên 500k
-  const shippingFee = subtotal > 500000 ? 0 : 30000;
+  const shippingFee = 0; // subtotal > 500000 ? 0 : 30000;
   const total = subtotal + (cart?.items?.length ? shippingFee : 0);
   const hasItems = (cart?.items?.length || 0) > 0;
 

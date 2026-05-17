@@ -14,11 +14,17 @@ import {
   Timer,
   X,
   AlertCircle,
+  MessageSquare,
 } from "lucide-react";
-import { getOrderByIdApi, cancelMyOrderApi } from "@/services/orderApi";
+import {
+  getOrderByIdApi,
+  cancelMyOrderApi,
+  getDriverLocationLatestApi,
+} from "@/services/orderApi";
 import type { OrderResponse, OrderStatus } from "@/types/order/OrderResponse";
 import { handleError, getMediaUrl } from "@/lib/utils";
 import { toast } from "sonner";
+import OrderTrackingMap from "@/components/driver/OrderTrackingMap";
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
   PENDING: "Chờ xác nhận",
@@ -92,6 +98,41 @@ export default function OrderDetailPage() {
   const [order, setOrder] = useState<OrderResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
+  const [driverLocation, setDriverLocation] = useState<{
+    latitude: number;
+    longitude: number;
+    recordedAt?: string;
+  } | null>(null);
+
+  useEffect(() => {
+    let timer: number | undefined;
+    const fetchLatest = async () => {
+      if (!id) return;
+      try {
+        const res = await getDriverLocationLatestApi(id);
+        const data = res.data.data;
+        if (data && data.latitude != null && data.longitude != null) {
+          setDriverLocation({
+            latitude: data.latitude,
+            longitude: data.longitude,
+            recordedAt: data.recordedAt,
+          });
+        }
+      } catch (err) {
+        // ignore
+      }
+    };
+
+    // start polling only when order exists and delivering
+    if (order && order.status === "DELIVERING") {
+      fetchLatest();
+      timer = window.setInterval(fetchLatest, 10000);
+    }
+
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [id, order]);
 
   useEffect(() => {
     if (!id) return;
@@ -158,7 +199,10 @@ export default function OrderDetailPage() {
         <AlertCircle className="h-12 w-12" />
         <p className="font-bold">Không tìm thấy đơn hàng.</p>
         <Link to="/order">
-          <Button variant="outline" className="rounded-none border-[#1A4331]/20 text-[#1A4331]">
+          <Button
+            variant="outline"
+            className="rounded-none border-[#1A4331]/20 text-[#1A4331]"
+          >
             Quay lại lịch sử
           </Button>
         </Link>
@@ -221,6 +265,13 @@ export default function OrderDetailPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content: Items List */}
           <div className="lg:col-span-2 space-y-6">
+            {order.status === "DELIVERING" && (
+              <OrderTrackingMap
+                deliveryAddress={fullAddress}
+                driverLocation={driverLocation}
+              />
+            )}
+
             <div className="bg-white border-2 border-[#1A4331]/15">
               <div className="px-6 py-4 border-b-2 border-[#1A4331]/10">
                 <h2 className="flex items-center gap-2 text-[#1A4331] font-bold text-sm uppercase tracking-wider">
@@ -242,7 +293,9 @@ export default function OrderDetailPage() {
                       </div>
                     )}
                     <div className="flex-1">
-                      <h4 className="font-bold text-[#1A4331]">{item.productName}</h4>
+                      <h4 className="font-bold text-[#1A4331]">
+                        {item.productName}
+                      </h4>
                       {item.selectedOptions?.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1">
                           {item.selectedOptions.map((opt) => (
@@ -250,15 +303,32 @@ export default function OrderDetailPage() {
                               key={opt.productOptionValueId}
                               className="text-[10px] bg-[#F8F5F0] border border-[#1A4331]/10 px-2 py-0.5 text-[#1A4331]/70"
                             >
-                              {opt.productOptionName}: {opt.productOptionValueName}
-                              {opt.extraPrice > 0 && ` (+${formatPrice(opt.extraPrice)})`}
+                              {opt.productOptionName}:{" "}
+                              {opt.productOptionValueName}
+                              {opt.extraPrice > 0 &&
+                                ` (+${formatPrice(opt.extraPrice)})`}
                             </span>
                           ))}
                         </div>
                       )}
                       <p className="text-sm text-[#8A9A7A] mt-1">
-                        Số lượng: {item.quantity} × {formatPrice(item.unitPrice)}
+                        Số lượng: {item.quantity} ×{" "}
+                        {formatPrice(item.unitPrice)}
                       </p>
+                      {order.status === "COMPLETED" && (
+                        <Link
+                          to={`/shop/products/${item.productId}`}
+                          className="mt-2 inline-flex"
+                        >
+                          <Button
+                            size="sm"
+                            className="h-8 bg-[#1A4331] hover:bg-[#8A9A7A] text-white rounded-none gap-1 text-xs font-bold"
+                          >
+                            <MessageSquare className="h-3.5 w-3.5" />
+                            Viết đánh giá
+                          </Button>
+                        </Link>
+                      )}
                     </div>
                     <p className="font-bold text-[#1A4331]">
                       {formatPrice(item.unitPrice * item.quantity)}
@@ -277,7 +347,10 @@ export default function OrderDetailPage() {
                     <div className="flex justify-between text-sm text-[#8A9A7A]">
                       <span>Giảm giá</span>
                       <span className="font-bold">
-                        -{formatPrice(order.priceBeforeDiscount - order.totalAmount)}
+                        -
+                        {formatPrice(
+                          order.priceBeforeDiscount - order.totalAmount,
+                        )}
                       </span>
                     </div>
                   )}
@@ -296,19 +369,29 @@ export default function OrderDetailPage() {
             <div className="bg-white border-2 border-[#1A4331]/15">
               <div className="px-6 py-4 border-b-2 border-[#1A4331]/10">
                 <h2 className="flex items-center gap-2 text-[#1A4331] font-bold text-sm uppercase tracking-wider">
-                  <MapPin className="h-4 w-4 text-[#8A9A7A]" /> Thông tin nhận hàng
+                  <MapPin className="h-4 w-4 text-[#8A9A7A]" /> Thông tin nhận
+                  hàng
                 </h2>
               </div>
               <div className="p-6 space-y-2 text-sm">
-                <p className="font-bold text-[#1A4331]">
-                  {order.receiverName}
-                </p>
+                <p className="font-bold text-[#1A4331]">{order.receiverName}</p>
                 <p className="text-[#1A4331]/70">{order.phone}</p>
                 <p className="text-[#8A9A7A] mt-1">{fullAddress}</p>
                 {order.storeName && (
                   <p className="text-xs text-[#1A4331]/50 mt-2">
                     Cửa hàng: {order.storeName}
                   </p>
+                )}
+                {driverLocation && (
+                  <div className="mt-3 text-xs text-[#1A4331]/70">
+                    <p className="font-bold">
+                      Vị trí tài xế đang được cập nhật
+                    </p>
+                    <p>
+                      {driverLocation.latitude.toFixed(6)},{" "}
+                      {driverLocation.longitude.toFixed(6)}
+                    </p>
+                  </div>
                 )}
               </div>
             </div>

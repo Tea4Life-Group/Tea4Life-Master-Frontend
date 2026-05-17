@@ -13,6 +13,8 @@ import {
   Building2,
   MapPinned,
   Check,
+  QrCode,
+  Truck,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/features/auth/useAuth";
@@ -135,6 +137,10 @@ export default function CheckoutPage() {
     }));
   };
 
+  const subtotal = cart?.totalAmount || 0;
+  const shippingFee = 0; // subtotal > 500000 ? 0 : 30000;
+  const total = subtotal + (cart?.items?.length ? shippingFee : 0);
+
   const handleSubmit = async () => {
     if (!formData.receiverName || !formData.phone || !formData.detail) {
       toast.error("Vui lòng điền đầy đủ thông tin giao hàng.");
@@ -146,6 +152,16 @@ export default function CheckoutPage() {
     try {
       setSubmitting(true);
 
+      // Snapshot cart BEFORE the checkout API call.
+      // Backend clears the cart immediately on checkout regardless of payment method,
+      // so if the user cancels BANKING payment we need this to restore their cart.
+      if (formData.paymentMethod === "BANKING") {
+        sessionStorage.setItem(
+          "tea4life_cart_snapshot",
+          JSON.stringify(cart.items),
+        );
+      }
+
       const res = await checkoutOrderApi({
         receiverName: formData.receiverName,
         phone: formData.phone,
@@ -155,11 +171,25 @@ export default function CheckoutPage() {
         latitude: formData.latitude,
         longitude: formData.longitude,
         paymentMethod: formData.paymentMethod,
+        shippingFee: shippingFee,
       });
 
+      const order = res.data.data;
+
+      // BANKING: hand off to PayOS
+      if (formData.paymentMethod === "BANKING" && order.checkoutUrl) {
+        toast.success("Đang chuyển đến trang thanh toán...");
+        window.location.href = order.checkoutUrl;
+        return;
+      }
+
+      // COD success — snapshot not needed
+      sessionStorage.removeItem("tea4life_cart_snapshot");
       toast.success("Đặt hàng thành công!");
-      navigate(`/order/${res.data.data.id}`);
+      navigate(`/order/${order.id}`);
     } catch (error) {
+      // Checkout API failed — cart was never touched, clear stale snapshot
+      sessionStorage.removeItem("tea4life_cart_snapshot");
       handleError(error, "Không thể đặt hàng. Vui lòng thử lại.");
     } finally {
       setSubmitting(false);
@@ -180,10 +210,6 @@ export default function CheckoutPage() {
       </div>
     );
   }
-
-  const subtotal = cart?.totalAmount || 0;
-  const shippingFee = subtotal > 500000 ? 0 : 30000;
-  const total = subtotal + (cart?.items?.length ? shippingFee : 0);
 
   return (
     <div className="min-h-screen bg-[#F8F5F0] text-[#1A4331] relative">
@@ -391,29 +417,34 @@ export default function CheckoutPage() {
                   onValueChange={handlePaymentChange}
                   className="space-y-3"
                 >
+                  {/* COD option */}
                   <div
                     onClick={() => handlePaymentChange("COD")}
-                    className={`flex items-center space-x-3 p-3 border-2 transition-colors cursor-pointer ${formData.paymentMethod === "COD" ? "border-[#1A4331] bg-[#1A4331]/5" : "border-[#1A4331]/10"}`}
+                    className={`flex items-start space-x-3 p-4 border-2 transition-all cursor-pointer ${formData.paymentMethod === "COD" ? "border-[#1A4331] bg-[#1A4331]/5" : "border-[#1A4331]/10 hover:border-[#1A4331]/30"}`}
                   >
-                    <RadioGroupItem value="COD" id="COD" />
-                    <Label
-                      htmlFor="COD"
-                      className="flex-1 cursor-pointer text-sm text-[#1A4331] font-bold"
-                    >
-                      Thanh toán khi nhận hàng (COD)
-                    </Label>
+                    <RadioGroupItem value="COD" id="COD" className="mt-0.5" />
+                    <div className="flex-1">
+                      <Label htmlFor="COD" className="flex items-center gap-2 cursor-pointer text-sm text-[#1A4331] font-bold">
+                        <Truck className="h-4 w-4 text-[#8A9A7A] shrink-0" />
+                        Thanh toán khi nhận hàng (COD)
+                      </Label>
+                      <p className="text-[11px] text-[#1A4331]/50 mt-1">Trả tiền mặt cho shipper khi nhận hàng.</p>
+                    </div>
                   </div>
+
+                  {/* BANKING / VietQR option */}
                   <div
                     onClick={() => handlePaymentChange("BANKING")}
-                    className={`flex items-center space-x-3 p-3 border-2 transition-colors cursor-pointer ${formData.paymentMethod === "BANKING" ? "border-[#1A4331] bg-[#1A4331]/5" : "border-[#1A4331]/10"}`}
+                    className={`flex items-start space-x-3 p-4 border-2 transition-all cursor-pointer ${formData.paymentMethod === "BANKING" ? "border-[#1A4331] bg-[#1A4331]/5" : "border-[#1A4331]/10 hover:border-[#1A4331]/30"}`}
                   >
-                    <RadioGroupItem value="BANKING" id="BANKING" />
-                    <Label
-                      htmlFor="BANKING"
-                      className="flex-1 cursor-pointer text-sm text-[#1A4331] font-bold"
-                    >
-                      Chuyển khoản ngân hàng (BANKING)
-                    </Label>
+                    <RadioGroupItem value="BANKING" id="BANKING" className="mt-0.5" />
+                    <div className="flex-1">
+                      <Label htmlFor="BANKING" className="flex items-center gap-2 cursor-pointer text-sm text-[#1A4331] font-bold">
+                        <QrCode className="h-4 w-4 text-[#8A9A7A] shrink-0" />
+                        Chuyển khoản ngân hàng (VietQR)
+                      </Label>
+                      <p className="text-[11px] text-[#1A4331]/50 mt-1">Quét mã QR để thanh toán qua PayOS — hỗ trợ tất cả ngân hàng.</p>
+                    </div>
                   </div>
                 </RadioGroup>
               </div>
@@ -457,9 +488,18 @@ export default function CheckoutPage() {
                   className="w-full bg-[#1A4331] text-[#F8F5F0] hover:bg-[#8A9A7A] rounded-none h-12 text-base font-bold mt-4"
                 >
                   {submitting ? (
-                    <Loader2 className="animate-spin h-5 w-5" />
+                    <span className="flex items-center gap-2">
+                      <Loader2 className="animate-spin h-4 w-4" />
+                      {formData.paymentMethod === "BANKING" ? "Đang tạo link thanh toán..." : "Đang xử lý..."}
+                    </span>
                   ) : (
-                    "Xác nhận Đặt hàng"
+                    <span className="flex items-center gap-2">
+                      {formData.paymentMethod === "BANKING" ? (
+                        <><QrCode className="h-4 w-4" /> Tiến hành thanh toán VietQR</>
+                      ) : (
+                        <><Truck className="h-4 w-4" /> Xác nhận Đặt hàng (COD)</>
+                      )}
+                    </span>
                   )}
                 </Button>
                 <p className="text-[10px] text-center text-[#8A9A7A] mt-2">

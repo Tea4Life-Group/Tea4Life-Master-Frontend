@@ -1,5 +1,3 @@
-/* eslint-disable react-refresh/only-export-components */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createBrowserRouter, Navigate } from "react-router-dom";
 
 // ========================================
@@ -18,6 +16,7 @@ import CategoriesPage from "@/pages/public-route-pages/categories";
 import NewsPage from "@/pages/public-route-pages/news";
 import NewsDetailPage from "@/pages/public-route-pages/news/detail";
 import StoresPage from "@/pages/public-route-pages/stores";
+import BlogPage from "@/pages/public-route-pages/blog";
 
 // ========================================
 // CUSTOMER PAGES — import trực tiếp (không lazy)
@@ -32,8 +31,11 @@ import AddressPage from "@/pages/customer-route-pages/profile/address";
 import CreateAddressPage from "@/pages/customer-route-pages/profile/address/create";
 import EditAddressPage from "@/pages/customer-route-pages/profile/address/edit";
 import SecurityPage from "@/pages/customer-route-pages/profile/security";
-
-
+import FavoritesPage from "@/pages/customer-route-pages/profile/favorites";
+import MyBlogReviewsPage from "@/pages/customer-route-pages/blog-reviews";
+import MyBlogReviewHistoryPage from "@/pages/customer-route-pages/blog-review-history";
+import PaymentSuccessPage from "@/pages/customer-route-pages/payment-success";
+import PaymentCancelPage from "@/pages/customer-route-pages/payment-cancel";
 
 // --- 1. NHÓM ROUTE CÔNG KHAI (PUBLIC) ---
 const publicRoutes = [
@@ -42,6 +44,7 @@ const publicRoutes = [
   { path: "shop/products/:id", element: <ProductDetail /> },
   { path: "brands", element: <BrandsListPage /> },
   { path: "categories", element: <CategoriesPage /> },
+  { path: "blog", element: <BlogPage /> },
   { path: "news", element: <NewsPage /> },
   { path: "news/category/:categorySlug", element: <NewsPage /> },
   { path: "news/:slug", element: <NewsDetailPage /> },
@@ -54,6 +57,10 @@ const customerRoutes = [
   { path: "order", element: <OrderPage /> },
   { path: "order/:id", element: <OrderDetailPage /> },
   { path: "checkout", element: <CheckoutPage /> },
+  { path: "my-reviews", element: <MyBlogReviewsPage /> },
+  { path: "my-review-history", element: <MyBlogReviewHistoryPage /> },
+  { path: "payment/success", element: <PaymentSuccessPage /> },
+  { path: "payment/cancel", element: <PaymentCancelPage /> },
   {
     path: "profile",
     element: <ProfileLayout />,
@@ -64,10 +71,10 @@ const customerRoutes = [
       { path: "address/create", element: <CreateAddressPage /> },
       { path: "address/edit/:id", element: <EditAddressPage /> },
       { path: "security", element: <SecurityPage /> },
+      { path: "favorites", element: <FavoritesPage /> },
     ],
   },
 ];
-
 
 // --- CẤU TRÌNH ROUTER CHÍNH ---
 export const router = createBrowserRouter([

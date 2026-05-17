@@ -10,17 +10,25 @@ import {
   Leaf,
   Loader2,
   ShoppingCart,
+  Heart,
 } from "lucide-react";
 import FilterSidebar from "./components/FilterSidebar.tsx";
 import { priceRanges } from "./constants.ts";
 import PaginationComponent from "@/components/custom/PaginationComponent";
-import { getProductsApi, getProductCategoriesApi } from "@/services/productApi";
+import {
+  getProductsApi,
+  getProductCategoriesApi,
+  getMyFavoritesApi,
+  addFavoriteApi,
+  removeFavoriteApi,
+} from "@/services/productApi";
 import type { ProductSummaryResponse } from "@/types/product/ProductSummaryResponse";
 import type { ProductCategoryResponse } from "@/types/product-category/ProductCategoryResponse";
 import { handleError, getMediaUrl } from "@/lib/utils";
 import { useAuth } from "@/features/auth/useAuth";
 import { RequireLoginDialog } from "@/components/custom/RequireLoginDialog";
 import { QuickOrderModal } from "@/components/custom/QuickOrderModal.tsx";
+import toast from "react-hot-toast";
 
 export default function ShopPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -32,6 +40,63 @@ export default function ShopPage() {
   // Quick Order Modal state
   const [showQuickOrderModal, setShowQuickOrderModal] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+
+  // Mock Favorite State
+  // Favorite State
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+
+  // Fetch favorite products to initialize heart state
+  const fetchFavoriteIds = useCallback(async () => {
+    if (!isAuthenticated) return;
+    try {
+      const res = await getMyFavoritesApi({ size: 100 });
+      const items = res.data.data.content || [];
+      setFavoriteIds(new Set(items.map((p) => p.id)));
+    } catch (error) {
+      console.error("Lỗi khi tải danh sách yêu thích:", error);
+    }
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    fetchFavoriteIds();
+  }, [fetchFavoriteIds]);
+
+  const toggleFavorite = async (e: React.MouseEvent, productId: string) => {
+    e.preventDefault();
+    if (!isAuthenticated) {
+      setShowLoginDialog(true);
+      return;
+    }
+
+    const isFav = favoriteIds.has(productId);
+
+    // Optimistic UI Update
+    setFavoriteIds((prev) => {
+      const newSet = new Set(prev);
+      if (isFav) newSet.delete(productId);
+      else newSet.add(productId);
+      return newSet;
+    });
+
+    try {
+      if (isFav) {
+        await removeFavoriteApi(productId);
+        toast.success("Đã xóa khỏi danh sách yêu thích");
+      } else {
+        await addFavoriteApi(productId);
+        toast.success("Đã thêm vào danh sách yêu thích");
+      }
+    } catch (error) {
+      // Revert optimistic update on failure
+      setFavoriteIds((prev) => {
+        const newSet = new Set(prev);
+        if (isFav) newSet.add(productId);
+        else newSet.delete(productId);
+        return newSet;
+      });
+      handleError(error, "Có lỗi xảy ra khi cập nhật yêu thích");
+    }
+  };
 
   // States for products from API
   const [products, setProducts] = useState<ProductSummaryResponse[]>([]);
@@ -324,6 +389,20 @@ export default function ShopPage() {
                       key={product.id}
                       className="group bg-white border-2 border-[#1A4331]/15 p-3 flex flex-col relative transition-all duration-200 hover:-translate-y-1 hover:shadow-[4px_4px_0px_rgba(26,67,49,0.1)]"
                     >
+                      {/* Favorite Button */}
+                      <button
+                        onClick={(e) => toggleFavorite(e, product.id)}
+                        className="absolute top-5 right-5 z-10 p-2 bg-white/90 backdrop-blur-sm rounded-full shadow-sm border border-[#1A4331]/10 hover:bg-red-50 hover:border-red-200 transition-all group/heart"
+                      >
+                        <Heart
+                          className={`w-4 h-4 transition-all duration-300 ${
+                            favoriteIds.has(product.id)
+                              ? "fill-red-500 text-red-500 scale-110"
+                              : "text-[#1A4331] group-hover/heart:text-red-500"
+                          }`}
+                        />
+                      </button>
+
                       {/* Image */}
                       <Link to={`/shop/products/${product.id}`}>
                         <div className="aspect-square bg-[#F8F5F0] border border-[#1A4331]/10 mb-3 relative overflow-hidden">
