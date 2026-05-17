@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button.tsx";
 import { getMyFavoritesApi, removeFavoriteApi } from "@/services/productApi";
 import type { ProductSummaryResponse } from "@/types/product/ProductSummaryResponse";
 import { getMediaUrl, handleError } from "@/lib/utils";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 
 export default function FavoritesPage() {
   const [products, setProducts] = useState<ProductSummaryResponse[]>([]);

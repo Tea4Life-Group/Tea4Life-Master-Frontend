@@ -28,7 +28,7 @@ import { handleError, getMediaUrl } from "@/lib/utils";
 import { useAuth } from "@/features/auth/useAuth";
 import { RequireLoginDialog } from "@/components/custom/RequireLoginDialog";
 import { QuickOrderModal } from "@/components/custom/QuickOrderModal.tsx";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 
 export default function ShopPage() {
   const [searchParams, setSearchParams] = useSearchParams();
