@@ -320,7 +320,7 @@ export default function AdminReportsPage() {
           <div className="flex items-center gap-2">
             <Select
               value={period}
-              onValueChange={(val) => setPeriod(val as ReportPeriod)}
+              onValueChange={(val: string) => setPeriod(val as ReportPeriod)}
             >
               <SelectTrigger className="w-[160px] h-9 text-sm">
                 <SelectValue placeholder="Chọn thời gian" />
@@ -393,7 +393,7 @@ export default function AdminReportsPage() {
                 <Tooltip content={<CustomTooltip />} />
                 <Legend
                   wrapperStyle={{ fontSize: "12px", paddingTop: "12px" }}
-                  formatter={(value) => (
+                  formatter={(value: string) => (
                     <span className="text-slate-600">{value}</span>
                   )}
                 />
