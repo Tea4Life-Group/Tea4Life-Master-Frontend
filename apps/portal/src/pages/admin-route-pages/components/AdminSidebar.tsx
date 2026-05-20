@@ -20,6 +20,7 @@ import {
   Newspaper,
   LibraryBig,
   Truck,
+  Bot,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -69,6 +70,7 @@ const adminGroups: SidebarGroup[] = [
   {
     label: "Hệ thống",
     links: [
+      { name: "AI Chat", href: "/app/admin/ai-chat", icon: Bot },
       { name: "Cửa hàng", href: "/app/admin/stores", icon: Store },
       { name: "Tài xế", href: "/app/admin/drivers", icon: Truck },
       { name: "Người dùng", href: "/app/admin/users", icon: Users },

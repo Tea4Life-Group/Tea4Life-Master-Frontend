@@ -1,31 +1,53 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Sparkles, Star, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button.tsx";
 import { getRandomProductsApi } from "@/services/productApi";
+import { getPublicProductRatingStatsApi } from "@/services/blogApi";
 import type { ProductSummaryResponse } from "@/types/product/ProductSummaryResponse";
 import { getMediaUrl } from "@/lib/utils";
 
 export function CosmicMessageSection() {
   const [randomProducts, setRandomProducts] = useState<ProductSummaryResponse[]>([]);
+  const [ratingStatsByProductId, setRatingStatsByProductId] = useState<
+    Record<string, { reviewCount: number; averageRating: number }>
+  >({});
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchRandomProducts = async () => {
-      try {
-        setLoading(true);
-        const res = await getRandomProductsApi();
-        if (res.data?.data) {
-          setRandomProducts(res.data.data);
-        }
-      } catch (error) {
-        console.error("Lỗi khi tải thông điệp vũ trụ:", error);
-      } finally {
-        setLoading(false);
+  const fetchRandomProducts = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await getRandomProductsApi();
+      const products = res.data?.data || [];
+      setRandomProducts(products);
+
+      const productIds = products.map((item) => item.id).filter(Boolean);
+      if (productIds.length === 0) {
+        setRatingStatsByProductId({});
+        return;
       }
-    };
-    fetchRandomProducts();
+
+      const ratingRes = await getPublicProductRatingStatsApi(productIds);
+      const stats = ratingRes.data.data || [];
+      const nextMap: Record<string, { reviewCount: number; averageRating: number }> = {};
+      stats.forEach((item) => {
+        nextMap[item.productId] = {
+          reviewCount: item.reviewCount || 0,
+          averageRating: item.averageRating || 0,
+        };
+      });
+      setRatingStatsByProductId(nextMap);
+    } catch (error) {
+      console.error("Lỗi khi tải thông điệp vũ trụ:", error);
+      setRatingStatsByProductId({});
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchRandomProducts();
+  }, [fetchRandomProducts]);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("vi-VN", {
@@ -85,19 +107,6 @@ export function CosmicMessageSection() {
 
           <Button 
             onClick={() => {
-              const fetchRandomProducts = async () => {
-                try {
-                  setLoading(true);
-                  const res = await getRandomProductsApi();
-                  if (res.data?.data) {
-                    setRandomProducts(res.data.data);
-                  }
-                } catch (error) {
-                  console.error("Lỗi khi tải thông điệp vũ trụ:", error);
-                } finally {
-                  setLoading(false);
-                }
-              };
               fetchRandomProducts();
             }}
             disabled={loading}
@@ -123,7 +132,11 @@ export function CosmicMessageSection() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 relative z-10">
-          {randomProducts.map((product) => (
+          {randomProducts.map((product) => {
+          const ratingStats = ratingStatsByProductId[product.id];
+          const hasRating = (ratingStats?.reviewCount || 0) > 0;
+          const averageRating = ratingStats?.averageRating || 0;
+          return (
           <div
             key={product.id}
             className="group bg-white rounded-3xl p-4 flex flex-col relative transition-all duration-300 hover:-translate-y-2 shadow-sm hover:shadow-xl border border-[#5c4033]/5 overflow-hidden"
@@ -147,6 +160,29 @@ export function CosmicMessageSection() {
               <p className="text-xs font-bold text-[#d97743] mb-1 uppercase tracking-wider">
                 {product.productCategoryName}
               </p>
+              {hasRating ? (
+                <div className="mb-2 flex items-center gap-1.5">
+                  <div className="flex items-center gap-0.5">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star
+                        key={i}
+                        className={`h-3.5 w-3.5 ${
+                          i < Math.round(averageRating)
+                            ? "fill-[#D2A676] text-[#D2A676]"
+                            : "fill-transparent text-[#D2A676]"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-xs font-semibold text-[#8A9A7A]">
+                    {averageRating.toFixed(1)}
+                  </span>
+                </div>
+              ) : (
+                <p className="mb-2 text-xs font-medium text-[#8A9A7A]">
+                  Chưa có đánh giá
+                </p>
+              )}
               <Link to={`/shop/products/${product.id}`}>
                 <h4 className="font-bold text-[#5c4033] text-lg leading-tight line-clamp-2 hover:text-[#d97743] transition-colors mb-2">
                   {product.name}
@@ -165,7 +201,8 @@ export function CosmicMessageSection() {
               </div>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
       )}
     </section>

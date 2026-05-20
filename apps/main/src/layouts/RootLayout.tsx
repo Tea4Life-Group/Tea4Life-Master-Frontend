@@ -2,6 +2,7 @@ import { Outlet } from "react-router-dom";
 import Header from "@/components/custom/Header";
 import Footer from "@/components/custom/Footer";
 import ScrollToTopButton from "@/components/custom/ScrollToTopButton";
+import ProductAiChatWidget from "@/components/custom/ProductAiChatWidget";
 
 export default function RootLayout() {
   return (
@@ -12,6 +13,7 @@ export default function RootLayout() {
       </main>
       <Footer />
       <ScrollToTopButton />
+      <ProductAiChatWidget />
     </div>
   );
 }

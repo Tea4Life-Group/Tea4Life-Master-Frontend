@@ -6,6 +6,7 @@ import type {
   BlogReviewHistoryResponse,
   BlogReviewLikeResponse,
   BlogReviewResponse,
+  ProductRatingStatsResponse,
   BlogReviewShareResponse,
 } from "@/types/blog/BlogReviewResponse";
 import type {
@@ -17,9 +18,9 @@ import type {
 } from "@/types/blog/BlogReviewRequest";
 import type { BlogReviewHistoryAction } from "@/types/blog/BlogReviewResponse";
 
-const PUBLIC_BASE = "/blog-service/api/v1/blog-reviews";
-const MY_BASE = "/blog-service/api/v1/my/blog-reviews";
-const ADMIN_BASE = "/blog-service/api/v1/admin/blog-reviews";
+const PUBLIC_BASE = "/blog-service/public/blog-reviews";
+const MY_BASE = "/blog-service/my/blog-reviews";
+const ADMIN_BASE = "/blog-service/admin/blog-reviews";
 
 export const getPublicBlogReviewsApi = async (params: {
   productId?: string;
@@ -38,6 +39,13 @@ export const getPublicBlogReviewDetailApi = async (reviewId: string) => {
   );
 };
 
+export const getPublicProductRatingStatsApi = async (productIds: string[]) => {
+  return await axiosClient.get<ApiResponse<ProductRatingStatsResponse[]>>(
+    `${PUBLIC_BASE}/product-ratings`,
+    { params: { productIds } },
+  );
+};
+
 export const createMyBlogReviewApi = async (data: CreateBlogReviewRequest) => {
   return await axiosClient.post<ApiResponse<BlogReviewResponse>>(MY_BASE, data);
 };
@@ -47,6 +55,12 @@ export const getMyBlogReviewsApi = async (params: { page?: number; size?: number
     MY_BASE,
     { params },
   );
+};
+
+export const hasReviewedProductApi = async (productId: string) => {
+  return await axiosClient.get<ApiResponse<boolean>>(`${MY_BASE}/has-reviewed`, {
+    params: { productId },
+  });
 };
 
 export const getMyBlogReviewHistoryApi = async (params: {

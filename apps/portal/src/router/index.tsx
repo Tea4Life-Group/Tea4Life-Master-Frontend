@@ -40,6 +40,7 @@ import AdminNewsPage from "@/pages/admin-route-pages/news";
 import AdminNewsEditorPage from "@/pages/admin-route-pages/news/editor";
 import AdminNewsCategoriesPage from "@/pages/admin-route-pages/news-categories";
 import AdminDriversPage from "@/pages/admin-route-pages/drivers";
+import AdminAiChatPage from "@/pages/admin-route-pages/ai-chat";
 
 // ========================================
 // DRIVER PAGES — lazy load theo cụm
@@ -91,6 +92,7 @@ const adminRoutes = [
   { path: "news/edit/:id", element: <AdminNewsEditorPage /> },
   { path: "news-categories", element: <AdminNewsCategoriesPage /> },
   { path: "drivers", element: <AdminDriversPage /> },
+  { path: "ai-chat", element: <AdminAiChatPage /> },
 ];
 
 // --- 4. NHÓM ROUTE TÀI XẾ (DRIVER) ---
