@@ -44,6 +44,12 @@ export interface BlogReviewShareResponse {
   totalShares: number;
 }
 
+export interface ProductRatingStatsResponse {
+  productId: string;
+  reviewCount: number;
+  averageRating: number;
+}
+
 export type BlogReviewHistoryAction =
   | "CREATED"
   | "UPDATED"

@@ -4,6 +4,10 @@ import type PageResponse from "@/types/base/PageResponse";
 import type { ProductDetailResponse } from "@/types/product/ProductDetailResponse";
 import type { ProductSummaryResponse } from "@/types/product/ProductSummaryResponse";
 import type { PopularProductCardResponse } from "@/types/product/PopularProductCardResponse";
+import type { ProductAiChatResponse } from "@/types/product/ProductAiChatResponse";
+import type { ProductAiChatRequest } from "@/types/product/ProductAiChatRequest";
+import type { ProductAiChatConfigResponse } from "@/types/product/ProductAiChatConfigResponse";
+import type { ProductAiChatHistoryItemResponse } from "@/types/product/ProductAiChatHistoryItemResponse";
 
 import type { ProductQuery } from "@/types/product/ProductQuery";
 import type { ProductCategoryResponse } from "@/types/product-category/ProductCategoryResponse";
@@ -37,6 +41,28 @@ export const getRandomProductsApi = async () => {
   return await axiosClient.get<ApiResponse<ProductSummaryResponse[]>>(
     "/product-service/public/products/random-items",
   );
+};
+
+export const chatWithProductAiApi = async (payload: ProductAiChatRequest) => {
+  return await axiosClient.post<ApiResponse<ProductAiChatResponse>>(
+    "/product-service/public/products/ai-chat",
+    payload,
+  );
+};
+
+export const getProductAiChatConfigApi = async () => {
+  return await axiosClient.get<ApiResponse<ProductAiChatConfigResponse>>(
+    "/product-service/public/products/ai-chat/config",
+  );
+};
+
+export const getProductAiChatHistoryApi = async (params?: {
+  page?: number;
+  size?: number;
+}) => {
+  return await axiosClient.get<
+    ApiResponse<PageResponse<ProductAiChatHistoryItemResponse>>
+  >("/product-service/public/products/ai-chat/history", { params });
 };
 
 export const getMyFavoritesApi = async (params?: { page?: number; size?: number }) => {

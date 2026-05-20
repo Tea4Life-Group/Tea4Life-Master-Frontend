@@ -22,6 +22,7 @@ import {
   addFavoriteApi,
   removeFavoriteApi,
 } from "@/services/productApi";
+import { getPublicProductRatingStatsApi } from "@/services/blogApi";
 import type { ProductSummaryResponse } from "@/types/product/ProductSummaryResponse";
 import type { ProductCategoryResponse } from "@/types/product-category/ProductCategoryResponse";
 import { handleError, getMediaUrl } from "@/lib/utils";
@@ -100,6 +101,9 @@ export default function ShopPage() {
 
   // States for products from API
   const [products, setProducts] = useState<ProductSummaryResponse[]>([]);
+  const [ratingStatsByProductId, setRatingStatsByProductId] = useState<
+    Record<string, { reviewCount: number; averageRating: number }>
+  >({});
   const [categories, setCategories] = useState<ProductCategoryResponse[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -131,6 +135,38 @@ export default function ShopPage() {
   }, [fetchCategories]);
 
   // Fetch products
+  const fetchProductRatingStats = useCallback(
+    async (items: ProductSummaryResponse[]) => {
+      const productIds = items.map((item) => item.id).filter(Boolean);
+      if (productIds.length === 0) {
+        setRatingStatsByProductId({});
+        return;
+      }
+
+      try {
+        const res = await getPublicProductRatingStatsApi(productIds);
+        const stats = res.data.data || [];
+        const nextMap: Record<
+          string,
+          { reviewCount: number; averageRating: number }
+        > = {};
+
+        stats.forEach((item) => {
+          nextMap[item.productId] = {
+            reviewCount: item.reviewCount || 0,
+            averageRating: item.averageRating || 0,
+          };
+        });
+
+        setRatingStatsByProductId(nextMap);
+      } catch (error) {
+        console.error("Không thể tải thống kê rating sản phẩm:", error);
+        setRatingStatsByProductId({});
+      }
+    },
+    [],
+  );
+
   const fetchProducts = useCallback(async () => {
     try {
       setLoading(true);
@@ -152,14 +188,16 @@ export default function ShopPage() {
         maxPrice,
       });
 
-      setProducts(res.data.data.content || []);
+      const fetchedProducts = res.data.data.content || [];
+      setProducts(fetchedProducts);
       setTotalElements(res.data.data.totalElements || 0);
+      await fetchProductRatingStats(fetchedProducts);
     } catch (error) {
       handleError(error, "Không thể tải sản phẩm");
     } finally {
       setLoading(false);
     }
-  }, [page, size, keyword, categoryId, priceRange]);
+  }, [page, size, keyword, categoryId, priceRange, fetchProductRatingStats]);
 
   useEffect(() => {
     fetchProducts();
@@ -384,7 +422,11 @@ export default function ShopPage() {
               <div className="space-y-10">
                 {/* Product Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                  {products.map((product) => (
+                  {products.map((product) => {
+                    const ratingStats = ratingStatsByProductId[product.id];
+                    const hasRating = (ratingStats?.reviewCount || 0) > 0;
+                    const averageRating = ratingStats?.averageRating || 0;
+                    return (
                     <div
                       key={product.id}
                       className="group bg-white border-2 border-[#1A4331]/15 p-3 flex flex-col relative transition-all duration-200 hover:-translate-y-1 hover:shadow-[4px_4px_0px_rgba(26,67,49,0.1)]"
@@ -420,15 +462,29 @@ export default function ShopPage() {
 
                       {/* Details */}
                       <div className="flex flex-col flex-1 space-y-2">
-                        {/* Rating (Mock) */}
-                        <div className="flex items-center gap-0.5">
-                          {Array.from({ length: 5 }).map((_, i) => (
-                            <Star
-                              key={i}
-                              className={`h-3.5 w-3.5 fill-[#D2A676] text-[#D2A676]`}
-                            />
-                          ))}
-                        </div>
+                        {hasRating ? (
+                          <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-0.5">
+                              {Array.from({ length: 5 }).map((_, i) => (
+                                <Star
+                                  key={i}
+                                  className={`h-3.5 w-3.5 ${
+                                    i < Math.round(averageRating)
+                                      ? "fill-[#D2A676] text-[#D2A676]"
+                                      : "fill-transparent text-[#D2A676]"
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                            <span className="text-xs font-semibold text-[#8A9A7A]">
+                              {averageRating.toFixed(1)}
+                            </span>
+                          </div>
+                        ) : (
+                          <p className="text-xs font-medium text-[#8A9A7A]">
+                            Chưa có đánh giá
+                          </p>
+                        )}
 
                         {/* Name */}
                         <Link to={`/shop/products/${product.id}`}>
@@ -464,7 +520,8 @@ export default function ShopPage() {
                         </div>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 {/* Pagination */}

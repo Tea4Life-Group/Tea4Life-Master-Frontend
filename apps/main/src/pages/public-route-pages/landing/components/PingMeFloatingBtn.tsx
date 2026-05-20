@@ -1,6 +1,35 @@
-import { memo } from "react";
+import { memo, useEffect, useState } from "react";
+
+const AI_CHAT_VISIBILITY_EVENT = "tea4life:ai-chat-visibility";
 
 export const PingMeFloatingBtn = memo(() => {
+  const [isAiChatOpen, setIsAiChatOpen] = useState(false);
+
+  useEffect(() => {
+    const initialState = document.body.dataset.aiChatOpen === "true";
+    setIsAiChatOpen(initialState);
+
+    const handleVisibilityChange = (event: Event) => {
+      const customEvent = event as CustomEvent<{ isOpen?: boolean }>;
+      setIsAiChatOpen(Boolean(customEvent.detail?.isOpen));
+    };
+
+    window.addEventListener(
+      AI_CHAT_VISIBILITY_EVENT,
+      handleVisibilityChange as EventListener,
+    );
+    return () => {
+      window.removeEventListener(
+        AI_CHAT_VISIBILITY_EVENT,
+        handleVisibilityChange as EventListener,
+      );
+    };
+  }, []);
+
+  if (isAiChatOpen) {
+    return null;
+  }
+
   return (
     <div className="fixed top-1/2 right-4 md:right-8 z-50 -translate-y-1/2 flex items-center group">
       
