@@ -181,84 +181,31 @@ export default function Header() {
                 {navLinks.map((link) => {
                   const isActive = isActivePath(link.href);
 
-                  if (link.isPrimary) {
-                    return (
-                      <Link
-                        key={link.name}
-                        to={link.href}
-                        className="relative group/cta mx-0.5"
-                      >
-                        <div
-                          className={`relative flex items-center gap-2 px-6 py-2 rounded-full text-sm font-bold
-                          bg-linear-to-r from-[#1A4331] to-[#1d4e39] text-white
-                          shadow-[0_2px_8px_rgba(26,67,49,0.3)]
-                          hover:shadow-[0_4px_16px_rgba(26,67,49,0.4)]
-                          hover:from-[#1d4e39] hover:to-[#226644]
-                          active:scale-[0.97]
-                          transition-all duration-300 overflow-hidden`}
-                        >
-                          {/* Shimmer sweep */}
-                          <div className="absolute inset-0 -translate-x-full group-hover/cta:translate-x-full bg-linear-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 ease-out" />
-                          <link.icon className="h-4 w-4 relative z-10 text-[#D2A676]" />
-                          <span className="relative z-10 tracking-wide">
-                            {link.name}
-                          </span>
-                        </div>
-                      </Link>
-                    );
-                  }
-
-                  if (link.isSecondary) {
-                    return (
-                      <Link
-                        key={link.name}
-                        to={link.href}
-                        className="relative group/sec mx-0.5"
-                      >
-                        <div
-                          className={`flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold transition-all duration-300
-                          ${
-                            isActive
-                              ? "bg-[#D2A676]/15 text-[#1A4331] ring-1 ring-[#D2A676]/30"
-                              : "text-[#1A4331]/80 hover:bg-[#D2A676]/10 hover:text-[#1A4331]"
-                          }
-                        `}
-                        >
-                          <link.icon
-                            className={`h-4 w-4 transition-colors duration-300 ${
-                              isActive
-                                ? "text-[#D2A676]"
-                                : "text-[#8A9A7A] group-hover/sec:text-[#D2A676]"
-                            }`}
-                          />
-                          <span>{link.name}</span>
-                        </div>
-                      </Link>
-                    );
-                  }
-
                   return (
                     <Link
                       key={link.name}
                       to={link.href}
-                      className={`relative px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 group/link
+                      className={`relative flex items-center gap-2 px-5 py-2 mx-0.5 rounded-full text-sm font-semibold transition-all duration-300 group/link overflow-hidden
                         ${
                           isActive
-                            ? "bg-white text-[#1A4331] shadow-sm ring-1 ring-[#1A4331]/8"
-                            : "text-[#1A4331]/60 hover:text-[#1A4331] hover:bg-white/60"
+                            ? "bg-linear-to-r from-[#1A4331] to-[#1d4e39] text-white shadow-[0_2px_8px_rgba(26,67,49,0.3)]"
+                            : "text-[#1A4331]/70 hover:text-[#1A4331] hover:bg-white/60"
                         }
                       `}
                     >
-                      <div className="flex items-center gap-2">
-                        <link.icon
-                          className={`h-4 w-4 transition-all duration-300 ${
-                            isActive
-                              ? "text-[#D2A676]"
-                              : "text-[#8A9A7A]/70 group-hover/link:text-[#8A9A7A]"
-                          }`}
-                        />
+                      {isActive && (
+                        <div className="absolute inset-0 -translate-x-full group-hover/link:translate-x-full bg-linear-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 ease-out" />
+                      )}
+                      <link.icon
+                        className={`h-4 w-4 relative z-10 transition-all duration-300 ${
+                          isActive
+                            ? "text-[#D2A676]"
+                            : "text-[#8A9A7A]/70 group-hover/link:text-[#D2A676]"
+                        }`}
+                      />
+                      <span className="relative z-10 tracking-wide">
                         {link.name}
-                      </div>
+                      </span>
                     </Link>
                   );
                 })}
