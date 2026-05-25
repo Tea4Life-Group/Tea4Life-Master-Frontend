@@ -2,7 +2,7 @@ import { useAppSelector } from "../store";
 
 export const useAuth = () => {
   const auth = useAppSelector((state) => state.auth);
-  const normalizedRole = auth.role.replace(/^ROLE_/, "").toUpperCase();
+  const normalizedRole = normalizeRole(auth.role);
   const storeRoles = ["STORE"];
   const driverRoles = ["DRIVER"];
   const isAdmin = normalizedRole === "ADMIN";
@@ -16,3 +16,13 @@ export const useAuth = () => {
     isLoading: auth.isLoading || !auth.initialized,
   };
 };
+
+function normalizeRole(role: string | null | undefined): string {
+  const normalized = (role ?? "")
+    .replace(/^ROLE_/, "")
+    .trim()
+    .toUpperCase();
+
+  const knownRoles = ["ADMIN", "DRIVER", "STORE", "MEMBER"];
+  return knownRoles.find((knownRole) => knownRole === normalized) ?? "";
+}

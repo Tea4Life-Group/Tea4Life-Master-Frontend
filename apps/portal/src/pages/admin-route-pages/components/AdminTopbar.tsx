@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/features/auth/useAuth";
 import keycloak from "@/lib/keycloak";
+import { getMediaUrl } from "@/lib/utils";
 
 interface AdminTopbarProps {
   onMenuClick?: () => void;
@@ -17,6 +18,7 @@ interface AdminTopbarProps {
 
 export default function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
   const { fullName, email, avatarUrl } = useAuth();
+  const avatarSrc = getMediaUrl(avatarUrl);
 
   const displayName = fullName || email || "Admin";
   const initials = displayName
@@ -56,7 +58,7 @@ export default function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
                 </p>
               </div>
               <Avatar className="h-8 w-8 border-2 border-emerald-100">
-                <AvatarImage src={avatarUrl || undefined} />
+                <AvatarImage src={avatarSrc || undefined} />
                 <AvatarFallback className="bg-emerald-50 text-emerald-700 text-[11px] font-bold">
                   {initials}
                 </AvatarFallback>
