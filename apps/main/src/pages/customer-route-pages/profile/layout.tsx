@@ -14,7 +14,7 @@ const menuItems = [
   { name: "Địa chỉ", href: "/profile/address", icon: MapPin },
   { name: "Bảo mật", href: "/profile/security", icon: Lock },
   { name: "Sản phẩm yêu thích", href: "/profile/favorites", icon: Heart },
-  { name: "Đánh giá của tôi", href: "/my-reviews", icon: MessageSquareText },
+  { name: "Đánh giá của tôi", href: "/profile/my-reviews", icon: MessageSquareText },
 ];
 
 export default function ProfileLayout() {

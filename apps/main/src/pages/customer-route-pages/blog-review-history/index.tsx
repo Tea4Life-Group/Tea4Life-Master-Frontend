@@ -120,19 +120,20 @@ export default function MyBlogReviewHistoryPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F5F0] text-[#1A4331] pt-12 pb-10">
-      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-        <div className="mb-6 border-b border-[#1A4331]/10 pb-4 flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold">Lịch Sử Tương Tác</h1>
-            <p className="text-sm text-[#8A9A7A] mt-1">
-              Theo dõi các bài review bạn đã yêu thích và bình luận.
-            </p>
-          </div>
-          <Link to="/my-reviews" className="text-sm font-semibold text-[#1A4331] underline">
-            Quay lại đánh giá của tôi
-          </Link>
+    <div className="bg-white border-2 border-[#1A4331]/15">
+      <div className="px-6 py-4 border-b-2 border-[#1A4331]/10 flex items-center justify-between gap-4">
+        <div>
+          <h2 className="text-[#1A4331] font-bold text-sm uppercase tracking-wider">Lịch Sử Tương Tác</h2>
+          <p className="text-[#8A9A7A] text-xs mt-1">
+            Theo dõi các bài review bạn đã yêu thích và bình luận.
+          </p>
         </div>
+        <Link to="/profile/my-reviews" className="text-sm font-semibold text-[#1A4331] underline hover:text-[#D2A676]">
+          Quay lại đánh giá của tôi
+        </Link>
+      </div>
+
+      <div className="p-6">
 
         <div className="bg-white border border-[#1A4331]/10 rounded-2xl p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">

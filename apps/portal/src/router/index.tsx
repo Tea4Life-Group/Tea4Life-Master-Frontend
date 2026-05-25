@@ -122,17 +122,17 @@ export const router = createBrowserRouter([
   },
   {
     path: "/app/admin",
-    element: <AuthGuard><AdminLayout /></AuthGuard>,
+    element: <AuthGuard allowedRoles={["ADMIN"]}><AdminLayout /></AuthGuard>,
     children: adminRoutes,
   },
   {
     path: "/app/drivers",
-    element: <AuthGuard><DriverLayout /></AuthGuard>,
+    element: <AuthGuard allowedRoles={["ADMIN", "DRIVER"]}><DriverLayout /></AuthGuard>,
     children: driverRoutes,
   },
   {
     path: "/app/stores",
-    element: <AuthGuard><StoreLayout /></AuthGuard>,
+    element: <AuthGuard allowedRoles={["ADMIN", "STORE"]}><StoreLayout /></AuthGuard>,
     children: storeRoutes,
   },
 ]);

@@ -111,22 +111,23 @@ export default function MyBlogReviewsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F5F0] text-[#1A4331] pt-12 pb-10">
-      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-        <div className="mb-6 border-b border-[#1A4331]/10 pb-4 flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold">Đánh Giá Của Tôi</h1>
-            <p className="text-sm text-[#8A9A7A] mt-1">
-              Quản lý các bài review sản phẩm bạn đã đăng.
-            </p>
-          </div>
-          <Link
-            to="/my-review-history"
-            className="inline-flex items-center rounded-full bg-[#1A4331] px-4 py-2 text-sm font-semibold text-white hover:bg-[#123224]"
-          >
-            Lịch sử hoạt động
-          </Link>
+    <div className="bg-white border-2 border-[#1A4331]/15">
+      <div className="px-6 py-4 border-b-2 border-[#1A4331]/10 flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-[#1A4331] font-bold text-sm uppercase tracking-wider">Đánh Giá Của Tôi</h2>
+          <p className="text-[#8A9A7A] text-xs mt-1">
+            Quản lý các bài review sản phẩm bạn đã đăng.
+          </p>
         </div>
+        <Link
+          to="/profile/my-review-history"
+          className="inline-flex items-center rounded-full bg-[#1A4331] px-4 py-2 text-sm font-semibold text-white hover:bg-[#123224]"
+        >
+          Lịch sử hoạt động
+        </Link>
+      </div>
+
+      <div className="p-6">
 
         {loading ? (
           <div className="py-20 flex items-center justify-center">

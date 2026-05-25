@@ -57,8 +57,7 @@ const customerRoutes = [
   { path: "order", element: <OrderPage /> },
   { path: "order/:id", element: <OrderDetailPage /> },
   { path: "checkout", element: <CheckoutPage /> },
-  { path: "my-reviews", element: <MyBlogReviewsPage /> },
-  { path: "my-review-history", element: <MyBlogReviewHistoryPage /> },
+
   { path: "payment/success", element: <PaymentSuccessPage /> },
   { path: "payment/cancel", element: <PaymentCancelPage /> },
   {
@@ -72,6 +71,8 @@ const customerRoutes = [
       { path: "address/edit/:id", element: <EditAddressPage /> },
       { path: "security", element: <SecurityPage /> },
       { path: "favorites", element: <FavoritesPage /> },
+      { path: "my-reviews", element: <MyBlogReviewsPage /> },
+      { path: "my-review-history", element: <MyBlogReviewHistoryPage /> },
     ],
   },
 ];

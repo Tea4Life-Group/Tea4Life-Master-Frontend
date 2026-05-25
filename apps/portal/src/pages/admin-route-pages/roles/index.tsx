@@ -44,11 +44,11 @@ export default function AdminRolesPage() {
   }, [fetchRoles]);
 
   const handleCreate = () => {
-    navigate("/admin/roles/create");
+    navigate("/app/admin/roles/create");
   };
 
   const handleEdit = (role: RoleResponse) => {
-    navigate(`/admin/roles/edit/${role.id}`);
+    navigate(`/app/admin/roles/edit/${role.id}`);
   };
 
   const handleDelete = async (id: string) => {

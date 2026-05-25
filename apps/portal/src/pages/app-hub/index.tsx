@@ -10,7 +10,7 @@ const sections = [
     description: "Quản lý sản phẩm, đơn hàng, người dùng, phân quyền và báo cáo",
     icon: Shield,
     path: "/app/admin",
-    requireRole: "ADMIN",
+    requireRoles: ["ADMIN"],
     gradient: "from-emerald-500 to-emerald-700",
     iconBg: "bg-emerald-100 text-emerald-700",
     disabledBg: "bg-slate-100 text-slate-400",
@@ -21,7 +21,7 @@ const sections = [
     description: "Xem và quản lý đơn hàng giao, cập nhật trạng thái vận chuyển",
     icon: Truck,
     path: "/app/drivers",
-    requireRole: null,
+    requireRoles: ["ADMIN", "DRIVER"],
     gradient: "from-blue-500 to-blue-700",
     iconBg: "bg-blue-100 text-blue-700",
     disabledBg: "bg-slate-100 text-slate-400",
@@ -32,7 +32,7 @@ const sections = [
     description: "Xử lý đơn hàng tại cửa hàng, theo dõi doanh số bán hàng",
     icon: Store,
     path: "/app/stores",
-    requireRole: null,
+    requireRoles: ["ADMIN", "STORE"],
     gradient: "from-amber-500 to-amber-700",
     iconBg: "bg-amber-100 text-amber-700",
     disabledBg: "bg-slate-100 text-slate-400",
@@ -41,7 +41,7 @@ const sections = [
 
 export default function AppHubPage() {
   const navigate = useNavigate();
-  const { fullName, email, role } = useAuth();
+  const { fullName, email, normalizedRole } = useAuth();
 
   const displayName = fullName || email || "Người dùng";
 
@@ -85,7 +85,7 @@ export default function AppHubPage() {
           {/* Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {sections.map((section) => {
-              const allowed = section.requireRole ? role === section.requireRole : true;
+              const allowed = section.requireRoles.includes(normalizedRole);
 
               return (
                 <button
