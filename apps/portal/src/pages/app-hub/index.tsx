@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/features/auth/useAuth";
 import { Shield, Truck, Store, Lock, ChevronRight } from "lucide-react";
 import keycloak from "@/lib/keycloak";
+import { canAccessRole } from "@/features/auth/roleUtils";
 
 const sections = [
   {
@@ -41,7 +42,7 @@ const sections = [
 
 export default function AppHubPage() {
   const navigate = useNavigate();
-  const { fullName, email, normalizedRole } = useAuth();
+  const { fullName, email, role } = useAuth();
 
   const displayName = fullName || email || "Người dùng";
 
@@ -85,7 +86,7 @@ export default function AppHubPage() {
           {/* Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {sections.map((section) => {
-              const allowed = section.requireRoles.includes(normalizedRole);
+              const allowed = canAccessRole(role, section.requireRoles);
 
               return (
                 <button

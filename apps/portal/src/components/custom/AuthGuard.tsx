@@ -2,6 +2,7 @@ import { useAuth } from "@/features/auth/useAuth";
 import { Navigate } from "react-router-dom";
 import LoginPage from "@/pages/login";
 import LoadingScreen from "@/components/custom/LoadingScreen";
+import { canAccessRole } from "@/features/auth/roleUtils";
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -9,7 +10,7 @@ interface AuthGuardProps {
 }
 
 export default function AuthGuard({ children, allowedRoles }: AuthGuardProps) {
-  const { isAuthenticated, initialized, normalizedRole } = useAuth();
+  const { isAuthenticated, initialized, role } = useAuth();
 
   if (!initialized) {
     return <LoadingScreen />;
@@ -19,7 +20,7 @@ export default function AuthGuard({ children, allowedRoles }: AuthGuardProps) {
     return <LoginPage />;
   }
 
-  if (allowedRoles?.length && !allowedRoles.includes(normalizedRole)) {
+  if (allowedRoles?.length && !canAccessRole(role, allowedRoles)) {
     return <Navigate to="/app" replace />;
   }
 

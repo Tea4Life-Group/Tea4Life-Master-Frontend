@@ -1,4 +1,5 @@
 import { useAppSelector } from "../store";
+import { normalizeRole } from "./roleUtils";
 
 export const useAuth = () => {
   const auth = useAppSelector((state) => state.auth);
@@ -16,13 +17,3 @@ export const useAuth = () => {
     isLoading: auth.isLoading || !auth.initialized,
   };
 };
-
-function normalizeRole(role: string | null | undefined): string {
-  const normalized = (role ?? "")
-    .replace(/^ROLE_/, "")
-    .trim()
-    .toUpperCase();
-
-  const knownRoles = ["ADMIN", "DRIVER", "STORE", "MEMBER"];
-  return knownRoles.find((knownRole) => knownRole === normalized) ?? "";
-}
