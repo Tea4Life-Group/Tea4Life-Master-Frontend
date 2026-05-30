@@ -8,14 +8,42 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Loader2, Minus, Plus, ShoppingCart, Info } from "lucide-react";
-import { getProductByIdApi } from "@/services/productApi";
+import { getProductByIdApi, getRecommendedOptionValuesApi } from "@/services/productApi";
 import type { ProductDetailResponse } from "@/types/product/ProductDetailResponse";
+import type { RecommendedOptionValueResponse } from "@/types/recommendation/RecommendedOptionValueResponse";
+import type { ProductOptionValueResponse } from "@/types/product-option/ProductOptionValueResponse";
 import { getMediaUrl, handleError } from "@/lib/utils";
 import { addCartItemApi } from "@/services/cartApi";
 import type { CartItemOptionSelectionRequest } from "@/types/cart/CartItemOptionSelectionRequest";
 import { toast } from "sonner";
 import { useAppDispatch } from "@/features/store";
 import { fetchCart, setLastAction } from "@/features/cart/cartSlice";
+
+const sortOptionValues = (
+  values: ProductOptionValueResponse[],
+  recommended: RecommendedOptionValueResponse[],
+): ProductOptionValueResponse[] => {
+  const recommendedMap = new Map<string, number>();
+  recommended.forEach((rec) => {
+    if (rec.optionValueId !== undefined && rec.optionValueId !== null) {
+      recommendedMap.set(String(rec.optionValueId), rec.score);
+    }
+  });
+
+  return [...values].sort((a, b) => {
+    const scoreA = recommendedMap.get(String(a.id));
+    const scoreB = recommendedMap.get(String(b.id));
+    const isA = scoreA !== undefined;
+    const isB = scoreB !== undefined;
+
+    if (isA && isB) {
+      return scoreB - scoreA;
+    }
+    if (isA) return -1;
+    if (isB) return 1;
+    return (a.sortOrder || 0) - (b.sortOrder || 0);
+  });
+};
 
 interface QuickOrderModalProps {
   productId: string | null;
@@ -34,6 +62,15 @@ export function QuickOrderModal({
   const [selectedOptions, setSelectedOptions] = useState<
     Record<string, string[]>
   >({});
+  const [recommendedOptionValues, setRecommendedOptionValues] = useState<
+    RecommendedOptionValueResponse[]
+  >([]);
+
+  const avgScore = useMemo(() => {
+    if (recommendedOptionValues.length === 0) return 0;
+    const sum = recommendedOptionValues.reduce((acc, curr) => acc + (curr.score || 0), 0);
+    return sum / recommendedOptionValues.length;
+  }, [recommendedOptionValues]);
 
   const dispatch = useAppDispatch();
 
@@ -61,6 +98,15 @@ export function QuickOrderModal({
           }
         });
         setSelectedOptions(initialSelections);
+
+        // Fetch recommended options for modal
+        try {
+          const recRes = await getRecommendedOptionValuesApi(id, 10);
+          setRecommendedOptionValues(recRes.data.data || []);
+        } catch (recErr) {
+          console.error("Lỗi khi tải topping gợi ý cho modal đặt hàng:", recErr);
+          setRecommendedOptionValues([]);
+        }
       } catch (error) {
         handleError(error, "Không thể tải chi tiết sản phẩm.");
         onClose();
@@ -80,6 +126,7 @@ export function QuickOrderModal({
         setProduct(null);
         setQuantity(1);
         setSelectedOptions({});
+        setRecommendedOptionValues([]);
       }, 0);
     }
   }, [isOpen, productId, fetchProductDetail]);
@@ -257,54 +304,102 @@ export function QuickOrderModal({
                             </span>
                           )}
                         </div>
-                        <div className="flex flex-col gap-2">
-                          {option.productOptionValues
-                            ?.sort(
-                              (a, b) => (a.sortOrder || 0) - (b.sortOrder || 0),
-                            )
+                        <div className="grid grid-cols-2 gap-x-2 gap-y-4">
+                          {sortOptionValues(option.productOptionValues || [], recommendedOptionValues)
                             .map((val) => {
                               const isSelected = (
                                 selectedOptions[option.id] || []
                               ).includes(val.id);
+                              const rec = recommendedOptionValues.find(
+                                (r) => String(r.optionValueId) === String(val.id),
+                              );
+                              const isRecommended = rec !== undefined && rec.score >= (avgScore - 20);
                               return (
                                 <label
                                   key={val.id}
-                                  className={`flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer ${
+                                  className={`relative flex flex-col items-center justify-between p-3 rounded-[1.25rem] border-2 transition-all cursor-pointer min-h-[135px] ${
                                     isSelected
-                                      ? "bg-[#1A4331]/5 border-[#1A4331] shadow-sm"
-                                      : "bg-white border-[#1A4331]/10 hover:border-[#8A9A7A]"
+                                      ? "bg-[#d97743]/10 border-2 border-[#d97743] shadow-sm"
+                                      : "bg-white border-[#1A4331]/10 hover:border-[#d97743]"
                                   }`}
                                 >
-                                  <div className="flex items-center gap-3">
-                                    {/* Radio/Checkbox visual */}
-                                    <div
-                                      className={`flex items-center justify-center w-5 h-5 shrink-0 rounded-full border border-solid ${isSelected ? "border-[#1A4331]" : "border-gray-300"} ${!option.isMultiSelect && isSelected ? "border-[5px]" : ""}`}
-                                    >
-                                      {option.isMultiSelect && isSelected && (
-                                        <div className="w-2.5 h-2.5 bg-[#1A4331] rounded-sm"></div>
-                                      )}
-                                    </div>
+                                  {/* Radio/Checkbox visual */}
+                                  <div
+                                    className={`absolute top-2 left-2 flex items-center justify-center w-4 h-4 shrink-0 rounded-full border border-solid ${isSelected ? "border-[#d97743]" : "border-gray-300"} ${!option.isMultiSelect && isSelected ? "border-[4px]" : ""}`}
+                                  >
+                                    {option.isMultiSelect && isSelected && (
+                                      <div className="w-2 h-2 bg-[#d97743] rounded-sm"></div>
+                                    )}
+                                  </div>
 
+                                  <div className="flex flex-col items-center gap-1.5 w-full min-w-0">
                                     {/* Thumbnail */}
                                     {val.imageUrl && (
                                       <img
                                         src={getMediaUrl(val.imageUrl)}
                                         alt={val.valueName}
-                                        className={`w-10 h-10 object-cover rounded-xl shrink-0 transition-all ${isSelected ? "border-2 border-[#1A4331]/30 shadow-sm scale-110" : "opacity-80 grayscale hover:grayscale-0"}`}
+                                        className={`w-9 h-9 object-cover rounded-full shrink-0 transition-all ${isSelected ? "border-2 border-[#d97743] scale-110 shadow-sm" : ""}`}
                                       />
                                     )}
 
                                     <span
-                                      className={`text-sm font-semibold ${isSelected ? "text-[#1A4331]" : "text-[#5c4033]"}`}
+                                      className={`text-xs text-center font-bold line-clamp-2 ${isSelected ? "text-[#d97743]" : "text-[#5c4033]"}`}
                                     >
                                       {val.valueName}
                                     </span>
                                   </div>
-                                  {val.extraPrice > 0 && (
-                                    <span className="text-xs font-bold text-[#8A9A7A]">
-                                      +{formatPrice(val.extraPrice)}
-                                    </span>
-                                  )}
+
+                                  <div className="flex flex-col items-center w-full gap-1.5 mt-1.5 shrink-0">
+                                    {val.extraPrice > 0 && (
+                                      <span className="text-xs font-bold text-[#8A9A7A] shrink-0 ml-1">
+                                        +{formatPrice(val.extraPrice)}
+                                      </span>
+                                    )}
+
+                                    {isRecommended && (
+                                      <span className="relative inline-flex items-center justify-center w-11 h-11 shrink-0 overflow-visible mt-1">
+                                        <style>{`
+                                          @keyframes rainbow-text-flow {
+                                            0% { background-position: 0% center; }
+                                            100% { background-position: 200% center; }
+                                          }
+                                          @keyframes rotate-rainbow {
+                                            0% {
+                                              transform: translate(-50%, -50%) rotate(0deg);
+                                              filter: hue-rotate(0deg) saturate(3) brightness(1.2);
+                                            }
+                                            100% {
+                                              transform: translate(-50%, -50%) rotate(360deg);
+                                              filter: hue-rotate(360deg) saturate(3) brightness(1.2);
+                                            }
+                                          }
+                                        `}</style>
+                                        <img
+                                          src="/common/vector_effect.png"
+                                          alt="effect"
+                                          className="absolute left-1/2 top-1/2 w-11 h-11 max-w-none object-contain"
+                                          style={{
+                                            animation: "rotate-rainbow 6s linear infinite",
+                                          }}
+                                        />
+                                        <span className="relative z-10 flex items-center justify-center bg-white/95 border border-slate-200/80 px-2 py-0.5 rounded-full shadow-xs">
+                                          <span
+                                            className="text-[9.5px] font-black uppercase tracking-tight text-center"
+                                            style={{
+                                              background: "linear-gradient(to right, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #8b00ff)",
+                                              backgroundSize: "200% auto",
+                                              WebkitBackgroundClip: "text",
+                                              WebkitTextFillColor: "transparent",
+                                              animation: "rainbow-text-flow 3s linear infinite",
+                                            }}
+                                          >
+                                            Gợi ý
+                                          </span>
+                                        </span>
+                                      </span>
+                                    )}
+                                  </div>
+
                                   {/* Hidden actual input */}
                                   <input
                                     type={

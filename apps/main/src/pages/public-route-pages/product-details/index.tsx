@@ -25,10 +25,12 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb.tsx";
 
-import { getProductByIdApi, getProductsApi } from "@/services/productApi";
+import { getProductByIdApi, getProductsApi, getRelatedProductsApi, getRecommendedOptionValuesApi } from "@/services/productApi";
 import { getLatestNewsApi } from "@/services/newsApi";
 import type { ProductDetailResponse } from "@/types/product/ProductDetailResponse";
 import type { ProductSummaryResponse } from "@/types/product/ProductSummaryResponse";
+import type { RecommendedOptionValueResponse } from "@/types/recommendation/RecommendedOptionValueResponse";
+import type { ProductOptionValueResponse } from "@/types/product-option/ProductOptionValueResponse";
 import type { NewsSummaryResponse } from "@/types/news/NewsSummaryResponse";
 import { getMediaUrl, handleError } from "@/lib/utils";
 import { useAuth } from "@/features/auth/useAuth";
@@ -51,6 +53,32 @@ import { useAppDispatch } from "@/features/store";
 import { fetchCart, setLastAction } from "@/features/cart/cartSlice";
 import { QuickOrderModal } from "@/components/custom/QuickOrderModal.tsx";
 
+const sortOptionValues = (
+  values: ProductOptionValueResponse[],
+  recommended: RecommendedOptionValueResponse[],
+): ProductOptionValueResponse[] => {
+  const recommendedMap = new Map<string, number>();
+  recommended.forEach((rec) => {
+    if (rec.optionValueId !== undefined && rec.optionValueId !== null) {
+      recommendedMap.set(String(rec.optionValueId), rec.score);
+    }
+  });
+
+  return [...values].sort((a, b) => {
+    const scoreA = recommendedMap.get(String(a.id));
+    const scoreB = recommendedMap.get(String(b.id));
+    const isA = scoreA !== undefined;
+    const isB = scoreB !== undefined;
+
+    if (isA && isB) {
+      return scoreB - scoreA;
+    }
+    if (isA) return -1;
+    if (isB) return 1;
+    return (a.sortOrder || 0) - (b.sortOrder || 0);
+  });
+};
+
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
@@ -61,6 +89,15 @@ export default function ProductDetail() {
   const [relatedProducts, setRelatedProducts] = useState<
     ProductSummaryResponse[]
   >([]);
+  const [recommendedOptionValues, setRecommendedOptionValues] = useState<
+    RecommendedOptionValueResponse[]
+  >([]);
+
+  const avgScore = useMemo(() => {
+    if (recommendedOptionValues.length === 0) return 0;
+    const sum = recommendedOptionValues.reduce((acc, curr) => acc + (curr.score || 0), 0);
+    return sum / recommendedOptionValues.length;
+  }, [recommendedOptionValues]);
 
   const { isAuthenticated } = useAuth();
   const dispatch = useAppDispatch();
@@ -86,8 +123,8 @@ export default function ProductDetail() {
   const [reviewContent, setReviewContent] = useState("");
   const [reviewRating, setReviewRating] = useState(5);
   const [submittingReview, setSubmittingReview] = useState(false);
-  const [latestNews, setLatestNews] = useState<NewsSummaryResponse[]>([]);
-  const [newsLoading, setNewsLoading] = useState(false);
+  const [latestBlogs, setLatestBlogs] = useState<BlogReviewResponse[]>([]);
+  const [blogsLoading, setBlogsLoading] = useState(false);
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
   const [commentMap, setCommentMap] = useState<Record<string, { id: string; authorEmail: string; content: string }[]>>({});
   const [submittingCommentFor, setSubmittingCommentFor] = useState<string | null>(null);
@@ -127,15 +164,15 @@ export default function ProductDetail() {
     }
   }, []);
 
-  const fetchLatestNews = useCallback(async () => {
+  const fetchLatestBlogs = useCallback(async () => {
     try {
-      setNewsLoading(true);
-      const res = await getLatestNewsApi();
-      setLatestNews((res.data.data || []).slice(0, 3));
+      setBlogsLoading(true);
+      const res = await getPublicBlogReviewsApi({ page: 0, size: 3 });
+      setLatestBlogs(res.data.data?.content || []);
     } catch (error) {
       handleError(error, "Không thể tải bài blog mới.");
     } finally {
-      setNewsLoading(false);
+      setBlogsLoading(false);
     }
   }, []);
 
@@ -184,18 +221,38 @@ export default function ProductDetail() {
       });
       setSelectedOptions(initialSelections);
 
-      // Fetch related products (same category)
-      if (productData.productCategory?.id) {
-        const relatedRes = await getProductsApi({
-          categoryId: productData.productCategory.id.toString(),
-          page: 1,
-          size: 4,
-        });
-        // filter out current
-        const related = (relatedRes.data.data.content || []).filter(
-          (p) => p.id.toString() !== id,
-        );
-        setRelatedProducts(related.slice(0, 4));
+      // Fetch related products (recommendation with category fallback)
+      let related: ProductSummaryResponse[] = [];
+      try {
+        const relatedRes = await getRelatedProductsApi(id, 4);
+        related = relatedRes.data.data || [];
+      } catch (err) {
+        console.error("Lỗi khi tải sản phẩm liên quan từ recommendation:", err);
+      }
+
+      if (related.length === 0 && productData.productCategory?.id) {
+        try {
+          const fallbackRes = await getProductsApi({
+            categoryId: productData.productCategory.id.toString(),
+            page: 1,
+            size: 4,
+          });
+          related = (fallbackRes.data.data.content || []).filter(
+            (p) => p.id.toString() !== id,
+          );
+        } catch (fallbackErr) {
+          console.error("Lỗi khi tải sản phẩm liên quan fallback theo category:", fallbackErr);
+        }
+      }
+      setRelatedProducts(related.slice(0, 4));
+
+      // Fetch recommended toppings/option values
+      try {
+        const recOptionsRes = await getRecommendedOptionValuesApi(String(productData.id), 10);
+        setRecommendedOptionValues(recOptionsRes.data.data || []);
+      } catch (err) {
+        console.error("Lỗi khi tải tùy chọn được đề xuất:", err);
+        setRecommendedOptionValues([]);
       }
 
       await Promise.all([
@@ -226,8 +283,8 @@ export default function ProductDetail() {
   }, [id, location.pathname, location.state, navigate]);
 
   useEffect(() => {
-    fetchLatestNews();
-  }, [fetchLatestNews]);
+    fetchLatestBlogs();
+  }, [fetchLatestBlogs]);
 
   const handleOptionToggle = (
     optionId: string,
@@ -623,15 +680,16 @@ export default function ProductDetail() {
                       </label>
                     </div>
 
-                    <div className="flex flex-wrap gap-3 mt-2">
-                      {option.productOptionValues
-                        ?.sort(
-                          (a, b) => (a.sortOrder || 0) - (b.sortOrder || 0),
-                        )
+                    <div className="grid grid-cols-2 gap-x-3 gap-y-4 mt-2">
+                      {sortOptionValues(option.productOptionValues || [], recommendedOptionValues)
                         .map((val) => {
                           const isSelected = (
                             selectedOptions[option.id] || []
                           ).includes(val.id);
+                           const rec = recommendedOptionValues.find(
+                             (r) => String(r.optionValueId) === String(val.id),
+                           );
+                           const isRecommended = rec !== undefined && rec.score >= (avgScore - 20);
                           return (
                             <button
                               key={val.id}
@@ -642,27 +700,75 @@ export default function ProductDetail() {
                                   option.isMultiSelect,
                                 )
                               }
-                              className={`flex items-center gap-3 px-5 py-3 text-sm font-semibold border-2 transition-all rounded-full ${
+                              className={`relative flex flex-col items-center justify-between w-full p-3 text-sm font-semibold border-2 transition-all rounded-[1.25rem] min-h-[135px] ${
                                 isSelected
-                                  ? "bg-[#5c4033] text-white border-[#5c4033] shadow-md -translate-y-0.5"
+                                  ? "bg-[#d97743]/10 text-[#d97743] border-[#d97743] shadow-md -translate-y-0.5"
                                   : "bg-white text-[#5c4033] border-[#5c4033]/10 hover:border-[#d97743] hover:-translate-y-0.5 hover:shadow-sm"
                               }`}
                             >
-                              {val.imageUrl && (
-                                <img
-                                  src={getMediaUrl(val.imageUrl)}
-                                  alt={val.valueName}
-                                  className={`w-9 h-9 object-cover rounded-full shrink-0 ${isSelected ? "border border-white/20" : "grayscale opacity-80"}`}
-                                />
-                              )}
-                              <span>{val.valueName}</span>
-                              {val.extraPrice > 0 && (
-                                <span
-                                  className={`text-xs ml-1 pl-2 border-l ${isSelected ? "text-emerald-100 border-white/20" : "text-[#d97743] border-[#5c4033]/20"}`}
-                                >
-                                  +{formatPrice(val.extraPrice)}
+                              <div className="flex flex-col items-center gap-1.5 w-full min-w-0">
+                                {val.imageUrl && (
+                                  <img
+                                    src={getMediaUrl(val.imageUrl)}
+                                    alt={val.valueName}
+                                    className={`w-9 h-9 object-cover rounded-full shrink-0 ${isSelected ? "border-2 border-[#d97743]" : ""}`}
+                                  />
+                                )}
+                                <span className={`text-xs text-center font-bold line-clamp-2 ${isSelected ? "text-[#d97743]" : "text-[#5c4033]"}`}>
+                                  {val.valueName}
                                 </span>
-                              )}
+                              </div>
+                              <div className="flex flex-col items-center w-full gap-1.5 mt-1.5 shrink-0">
+                                {val.extraPrice > 0 && (
+                                  <span
+                                    className={`text-xs font-semibold ${isSelected ? "text-[#d97743]" : "text-[#8A9A7A]"}`}
+                                  >
+                                    +{formatPrice(val.extraPrice)}
+                                  </span>
+                                )}
+                                {isRecommended && (
+                                  <span className="relative inline-flex items-center justify-center w-11 h-11 shrink-0 overflow-visible mt-1">
+                                    <style>{`
+                                      @keyframes rainbow-text-flow {
+                                        0% { background-position: 0% center; }
+                                        100% { background-position: 200% center; }
+                                      }
+                                      @keyframes rotate-rainbow {
+                                        0% {
+                                          transform: translate(-50%, -50%) rotate(0deg);
+                                          filter: hue-rotate(0deg) saturate(3) brightness(1.2);
+                                        }
+                                        100% {
+                                          transform: translate(-50%, -50%) rotate(360deg);
+                                          filter: hue-rotate(360deg) saturate(3) brightness(1.2);
+                                        }
+                                      }
+                                    `}</style>
+                                    <img
+                                      src="/common/vector_effect.png"
+                                      alt="effect"
+                                      className="absolute left-1/2 top-1/2 w-11 h-11 max-w-none object-contain"
+                                      style={{
+                                        animation: "rotate-rainbow 6s linear infinite",
+                                      }}
+                                    />
+                                    <span className="relative z-10 flex items-center justify-center bg-white/95 border border-slate-200/80 px-2 py-0.5 rounded-full shadow-xs">
+                                      <span
+                                        className="text-[9.5px] font-black uppercase tracking-tight text-center"
+                                        style={{
+                                          background: "linear-gradient(to right, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #8b00ff)",
+                                          backgroundSize: "200% auto",
+                                          WebkitBackgroundClip: "text",
+                                          WebkitTextFillColor: "transparent",
+                                          animation: "rainbow-text-flow 3s linear infinite",
+                                        }}
+                                      >
+                                        Gợi ý
+                                      </span>
+                                    </span>
+                                  </span>
+                                )}
+                              </div>
                             </button>
                           );
                         })}
@@ -954,32 +1060,80 @@ export default function ProductDetail() {
           <div className="flex items-center justify-between gap-3 mb-6 pb-4 border-b border-[#5c4033]/10">
             <h3 className="text-2xl font-bold text-[#5c4033]">Bài blog liên quan</h3>
             <Link
-              to="/news"
+              to="/blog"
               className="text-sm font-semibold px-4 py-2 rounded-full bg-[#F8F5F0] text-[#5c4033] border border-[#5c4033]/10"
             >
               Xem tất cả
             </Link>
           </div>
-          {newsLoading ? (
+          {blogsLoading ? (
             <div className="py-10 flex justify-center">
               <Loader2 className="h-6 w-6 animate-spin text-[#5c4033]" />
             </div>
-          ) : latestNews.length === 0 ? (
+          ) : latestBlogs.length === 0 ? (
             <div className="text-sm text-[#8A9A7A] py-10 text-center border border-dashed border-[#5c4033]/20 rounded-2xl">
               Chưa có bài blog nào.
             </div>
           ) : (
-            <div className="grid md:grid-cols-3 gap-4">
-              {latestNews.map((news) => (
-                <Link
-                  key={news.id}
-                  to={`/news/${news.slug}`}
-                  className="border border-[#5c4033]/10 rounded-2xl p-4 bg-[#F8F5F0]/60 hover:bg-[#F8F5F0] transition-colors"
-                >
-                  <p className="text-xs text-[#d97743] font-semibold">{news.categoryName}</p>
-                  <p className="font-bold text-[#5c4033] mt-2 line-clamp-2">{news.title}</p>
-                </Link>
-              ))}
+            <div className="grid md:grid-cols-3 gap-6">
+              {latestBlogs.map((blog) => {
+                const formattedDate = blog.createdAt
+                  ? new Date(blog.createdAt).toLocaleDateString("vi-VN", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                    })
+                  : "";
+
+                return (
+                  <Link
+                    key={blog.id}
+                    to={`/blog?reviewId=${blog.id}`}
+                    className="group bg-[#F8F5F0]/50 flex flex-col h-full rounded-[2rem] overflow-hidden border border-[#5c4033]/5 shadow-xs hover:shadow-md hover:-translate-y-1.5 transition-all duration-300"
+                  >
+                    {/* Thumbnail Section */}
+                    <div className="relative aspect-video w-full overflow-hidden bg-white">
+                      {blog.thumbnailUrl ? (
+                        <img
+                          src={getMediaUrl(blog.thumbnailUrl)}
+                          alt={blog.title}
+                          className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-[#d97743] opacity-30">
+                          <Leaf className="w-12 h-12" />
+                        </div>
+                      )}
+                      {/* Floating Category Badge */}
+                      <span className="absolute top-4 left-4 bg-white/90 backdrop-blur-xs text-[#d97743] text-[10px] px-3.5 py-1.5 rounded-full font-bold shadow-sm uppercase tracking-wider">
+                        {blog.productName || "Thảo luận"}
+                      </span>
+                    </div>
+
+                    {/* Content Section */}
+                    <div className="p-5 flex-1 flex flex-col justify-between">
+                      <div>
+                        {/* Date */}
+                        {formattedDate && (
+                          <span className="text-xs text-[#8A9A7A] font-semibold block mb-2">
+                            {formattedDate}
+                          </span>
+                        )}
+                        {/* Title */}
+                        <h4 className="font-bold text-[#5c4033] text-base leading-snug line-clamp-2 group-hover:text-[#d97743] transition-colors duration-300">
+                          {blog.title}
+                        </h4>
+                      </div>
+                      
+                      {/* Read More Link */}
+                      <div className="mt-4 pt-3 border-t border-dashed border-[#5c4033]/10 flex items-center justify-between text-xs font-bold text-[#5c4033]/80 group-hover:text-[#d97743] transition-colors">
+                        <span>Đọc chi tiết</span>
+                        <span className="transform translate-x-0 group-hover:translate-x-1.5 transition-transform duration-300">&rarr;</span>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           )}
         </div>

@@ -11,6 +11,47 @@ import type { ProductAiChatHistoryItemResponse } from "@/types/product/ProductAi
 
 import type { ProductQuery } from "@/types/product/ProductQuery";
 import type { ProductCategoryResponse } from "@/types/product-category/ProductCategoryResponse";
+import type { RecommendedOptionValueResponse } from "@/types/recommendation/RecommendedOptionValueResponse";
+
+export const getRelatedProductsApi = async (productId: string, limit = 4) => {
+  return await axiosClient.get<ApiResponse<ProductSummaryResponse[]>>(
+    `/product-service/public/products/${productId}/related`,
+    {
+      params: { limit },
+      transformResponse: [
+        (data) => {
+          if (typeof data !== "string") return data;
+          try {
+            const safeText = data.replace(/:\s*(\d{15,})/g, ':"$1"');
+            return JSON.parse(safeText);
+          } catch (e) {
+            return JSON.parse(data);
+          }
+        }
+      ]
+    }
+  );
+};
+
+export const getRecommendedOptionValuesApi = async (productId: string, limit = 10) => {
+  return await axiosClient.get<ApiResponse<RecommendedOptionValueResponse[]>>(
+    `/product-service/public/products/${productId}/option-values/recommended`,
+    {
+      params: { limit },
+      transformResponse: [
+        (data) => {
+          if (typeof data !== "string") return data;
+          try {
+            const safeText = data.replace(/:\s*(\d{15,})/g, ':"$1"');
+            return JSON.parse(safeText);
+          } catch (e) {
+            return JSON.parse(data);
+          }
+        }
+      ]
+    }
+  );
+};
 
 export const getProductsApi = async (params: ProductQuery) => {
   return await axiosClient.get<

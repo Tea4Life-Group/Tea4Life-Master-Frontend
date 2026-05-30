@@ -93,7 +93,7 @@ export function HeroCarousel() {
           image: getMediaUrl(item.imageUrl),
           bgColor: style.bgColor,
           textColor: style.textColor,
-          linkTo: `/product-details/${item.id}`,
+          linkTo: `/shop/products/${item.id}`,
         };
       })
     : banners;
