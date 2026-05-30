@@ -26,12 +26,10 @@ import {
 } from "@/components/ui/breadcrumb.tsx";
 
 import { getProductByIdApi, getProductsApi, getRelatedProductsApi, getRecommendedOptionValuesApi } from "@/services/productApi";
-import { getLatestNewsApi } from "@/services/newsApi";
 import type { ProductDetailResponse } from "@/types/product/ProductDetailResponse";
 import type { ProductSummaryResponse } from "@/types/product/ProductSummaryResponse";
 import type { RecommendedOptionValueResponse } from "@/types/recommendation/RecommendedOptionValueResponse";
 import type { ProductOptionValueResponse } from "@/types/product-option/ProductOptionValueResponse";
-import type { NewsSummaryResponse } from "@/types/news/NewsSummaryResponse";
 import { getMediaUrl, handleError } from "@/lib/utils";
 import { useAuth } from "@/features/auth/useAuth";
 import { RequireLoginDialog } from "@/components/custom/RequireLoginDialog";
