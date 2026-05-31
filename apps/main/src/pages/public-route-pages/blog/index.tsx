@@ -29,11 +29,15 @@ import {
 } from "@/services/blogApi";
 import type { BlogReviewCommentResponse, BlogReviewResponse } from "@/types/blog/BlogReviewResponse";
 import { getMediaUrl, handleError } from "@/lib/utils";
+import DOMPurify from "dompurify";
 import { handleUpload } from "@/services/storageApi";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useAuth } from "@/features/auth/useAuth";
 import { RequireLoginDialog } from "@/components/custom/RequireLoginDialog";
+import RichTextEditor from "@/components/custom/RichTextEditor";
+import ShareableReviewCard from "@/components/custom/ShareableReviewCard";
+import InteractiveSentimentHeatmap from "@/components/custom/InteractiveSentimentHeatmap";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -62,20 +66,28 @@ export default function BlogPage() {
   const [deletingReviewId, setDeletingReviewId] = useState<string | null>(null);
   const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
   const [savingEditReviewId, setSavingEditReviewId] = useState<string | null>(null);
+  const [shareReviewFor, setShareReviewFor] = useState<BlogReviewResponse | null>(null);
+  const [weekdayFilter, setWeekdayFilter] = useState<number | null>(null);
   const isQuickComposerOpen = true;
   const [quickTitle, setQuickTitle] = useState("");
-  const [quickContent, setQuickContent] = useState("");
+  const [quickContent, setQuickContent] = useState("" as string);
   const [quickImageFile, setQuickImageFile] = useState<File | null>(null);
   const [quickImagePreview, setQuickImagePreview] = useState<string | null>(null);
   const [quickSubmitting, setQuickSubmitting] = useState(false);
   const [editTitle, setEditTitle] = useState("");
-  const [editContent, setEditContent] = useState("");
+  const [editContent, setEditContent] = useState("" as string);
   const [editRating, setEditRating] = useState(5);
   const [showLoginDialog, setShowLoginDialog] = useState(false);
   const { isAuthenticated, email, fullName } = useAuth();
   const totalPages = Math.max(1, Math.ceil(totalElements / size));
   const startItem = totalElements === 0 ? 0 : (page - 1) * size + 1;
   const endItem = Math.min(page * size, totalElements);
+  const visibleItems = items.filter((it) => {
+    if (weekdayFilter === null) return true;
+    if (!it.createdAt) return false;
+    const wd = new Date(it.createdAt).getDay();
+    return wd === weekdayFilter;
+  });
 
   const formatDateTime = (value: string) => {
     if (!value) return "";
@@ -186,6 +198,27 @@ export default function BlogPage() {
       toast.warning("Vui lòng nhập nội dung bình luận.");
       return;
     }
+    // Optimistic comment: append a temporary comment immediately
+    const tempId = `temp-${Date.now()}`;
+    const tempComment: any = {
+      id: tempId,
+      reviewId,
+      parentCommentId: replyTargetMap[reviewId]?.commentId,
+      content,
+      authorKeycloakId: "me",
+      authorEmail: email || "",
+      authorName: fullName || email || "Bạn",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    setCommentInputs((prev) => ({ ...prev, [reviewId]: "" }));
+    setReplyTargetMap((prev) => ({ ...prev, [reviewId]: null }));
+    setCommentMap((prev) => ({ ...(prev || {}), [reviewId]: [...(prev[reviewId] || []), tempComment] }));
+    setItems((prev) =>
+      prev.map((item) => (item.id === reviewId ? { ...item, totalComments: (item.totalComments || 0) + 1 } : item)),
+    );
+
     try {
       setSubmittingCommentFor(reviewId);
       const res = await createBlogReviewCommentApi(reviewId, {
@@ -193,21 +226,23 @@ export default function BlogPage() {
         parentCommentId: replyTargetMap[reviewId]?.commentId,
       });
       const newComment = res.data.data;
-      setCommentInputs((prev) => ({ ...prev, [reviewId]: "" }));
-      setReplyTargetMap((prev) => ({ ...prev, [reviewId]: null }));
+      // replace temp comment with server comment
       setCommentMap((prev) => ({
         ...prev,
-        [reviewId]: [...(prev[reviewId] || []), newComment],
+        [reviewId]: (prev[reviewId] || []).map((c) => (c.id === tempId ? newComment : c)),
+      }));
+      toast.success("Đã thêm bình luận.");
+    } catch (error) {
+      // rollback: remove temp comment and decrement count
+      setCommentMap((prev) => ({
+        ...prev,
+        [reviewId]: (prev[reviewId] || []).filter((c) => c.id !== tempId),
       }));
       setItems((prev) =>
         prev.map((item) =>
-          item.id === reviewId
-            ? { ...item, totalComments: (item.totalComments || 0) + 1 }
-            : item,
+          item.id === reviewId ? { ...item, totalComments: Math.max(0, (item.totalComments || 1) - 1) } : item,
         ),
       );
-      toast.success("Đã thêm bình luận.");
-    } catch (error) {
       handleError(error, "Không thể gửi bình luận.");
     } finally {
       setSubmittingCommentFor(null);
@@ -226,10 +261,7 @@ export default function BlogPage() {
     setCommentInputs((prev) => {
       const current = prev[reviewId] || "";
       const mention = `@${displayName} `;
-      return {
-        ...prev,
-        [reviewId]: current.startsWith(mention) ? current : `${mention}${current}`.trimStart(),
-      };
+      return { ...prev, [reviewId]: current.startsWith(mention) ? current : `${mention}${current}`.trimStart() };
     });
     setTimeout(() => {
       commentInputRefs.current[reviewId]?.focus();
@@ -483,21 +515,12 @@ export default function BlogPage() {
               {isQuickComposerOpen && (
                 <div className="mt-2 space-y-2.5 border-t border-[#1A4331]/10 pt-2.5">
                   <div className="relative">
-                    <textarea
+                    <RichTextEditor
                       value={quickContent}
-                      onChange={(e) => setQuickContent(e.target.value)}
+                      onChange={(html) => setQuickContent(html)}
                       placeholder="Bạn đang nghĩ gì? Chia sẻ với cộng đồng Tea4Life..."
-                      className="w-full h-20 rounded-xl border border-[#1A4331]/15 px-3 py-2 pr-12 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#1A4331]/20"
+                      className="w-full"
                     />
-                    <label className="absolute right-2 bottom-2 inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#1A4331]/20 bg-white text-[#1A4331] cursor-pointer hover:bg-[#F8F5F0]">
-                      <ImagePlus className="h-4 w-4" />
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleQuickImageChange}
-                        className="hidden"
-                      />
-                    </label>
                   </div>
                   <div className="flex items-center justify-between gap-3">
                     {quickImagePreview && (
@@ -553,13 +576,16 @@ export default function BlogPage() {
                 <p className="mt-1 text-sm text-[#5c4033]/80">
                   Sản phẩm: {focusedReview.productName || `#${focusedReview.productId}`}
                 </p>
-                <p className="mt-2 text-sm text-[#5c4033]/90 whitespace-pre-line">
-                  {focusedReview.summary || focusedReview.content}
-                </p>
+                <div
+                  className="mt-2 text-sm text-[#5c4033]/90"
+                  dangerouslySetInnerHTML={{
+                    __html: DOMPurify.sanitize(focusedReview.summary || focusedReview.content || ""),
+                  }}
+                />
               </div>
             )}
             <div className="space-y-5">
-              {items.map((item) => (
+              {visibleItems.map((item) => (
                 <article
                   key={item.id}
                   className="bg-white border border-[#1A4331]/10 rounded-3xl p-5 md:p-6 shadow-sm"
@@ -645,11 +671,11 @@ export default function BlogPage() {
                         className="w-full rounded-xl border border-[#1A4331]/15 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1A4331]/20"
                         placeholder="Tiêu đề đánh giá"
                       />
-                      <textarea
+                      <RichTextEditor
                         value={editContent}
-                        onChange={(e) => setEditContent(e.target.value)}
-                        className="w-full h-28 rounded-xl border border-[#1A4331]/15 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#1A4331]/20"
+                        onChange={(html) => setEditContent(html)}
                         placeholder="Nội dung đánh giá"
+                        className="w-full"
                       />
                       <div className="flex items-center gap-1">
                         <span className="text-sm font-semibold mr-1">Điểm:</span>
@@ -708,9 +734,10 @@ export default function BlogPage() {
                         )}
                       </div>
 
-                      <p className="text-[15px] text-[#5c4033]/90 mt-3 whitespace-pre-line leading-relaxed">
-                        {item.summary || item.content}
-                      </p>
+                      <div
+                        className="text-[15px] text-[#5c4033]/90 mt-3 leading-relaxed"
+                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(item.summary || item.content || "") }}
+                      />
                     </>
                   )}
 
@@ -755,6 +782,14 @@ export default function BlogPage() {
                       >
                         <Share2 className="h-3.5 w-3.5" />
                         {item.totalShares || 0}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShareReviewFor(item)}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs border bg-white text-[#5c4033] border-[#5c4033]/20 transition-all hover:border-[#d97743] hover:text-[#d97743] hover:bg-[#fff7f2]"
+                      >
+                        <ImagePlus className="h-3.5 w-3.5" />
+                        Share Card
                       </button>
                     </div>
                     <div className="space-y-3">
@@ -926,6 +961,23 @@ export default function BlogPage() {
         title="Yêu cầu đăng nhập"
         description="Bạn cần đăng nhập để tương tác với bài review nhé!"
       />
+      {shareReviewFor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
+          <div className="max-w-3xl w-full rounded-lg bg-white p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold">Share Card Preview</h3>
+              <button onClick={() => setShareReviewFor(null)} className="text-sm text-[#1A4331]">Đóng</button>
+            </div>
+            <ShareableReviewCard
+              title={shareReviewFor.title}
+              summary={shareReviewFor.summary || shareReviewFor.content}
+              rating={shareReviewFor.rating}
+              thumbnailUrl={shareReviewFor.thumbnailUrl}
+              logoUrl={getMediaUrl("logo.png")}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -119,6 +119,17 @@ export default function MyBlogReviewHistoryPage() {
     setHistoryDateRange(undefined);
   };
 
+  const setQuickRange = (days?: number) => {
+    if (!days) {
+      setHistoryDateRange(undefined);
+      return;
+    }
+    const to = new Date();
+    const from = new Date();
+    from.setDate(from.getDate() - (days - 1));
+    setHistoryDateRange({ from, to });
+  };
+
   return (
     <div className="bg-white border-2 border-[#1A4331]/15">
       <div className="px-6 py-4 border-b-2 border-[#1A4331]/10 flex items-center justify-between gap-4">
@@ -174,6 +185,35 @@ export default function MyBlogReviewHistoryPage() {
                   />
                 </PopoverContent>
               </Popover>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setQuickRange(7)}
+                  disabled={historyLoading}
+                  className="rounded-lg border border-[#1A4331]/10 bg-white px-2 py-1 text-xs font-semibold text-[#1A4331] hover:bg-[#1A4331]/5"
+                  title="7 ngày"
+                >
+                  7d
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setQuickRange(30)}
+                  disabled={historyLoading}
+                  className="rounded-lg border border-[#1A4331]/10 bg-white px-2 py-1 text-xs font-semibold text-[#1A4331] hover:bg-[#1A4331]/5"
+                  title="30 ngày"
+                >
+                  30d
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setQuickRange(undefined)}
+                  disabled={historyLoading}
+                  className="rounded-lg border border-[#1A4331]/10 bg-white px-2 py-1 text-xs font-semibold text-[#1A4331] hover:bg-[#1A4331]/5"
+                  title="Tất cả"
+                >
+                  All
+                </button>
+              </div>
               <button
                 type="button"
                 onClick={handleResetHistoryFilters}
