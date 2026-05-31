@@ -115,3 +115,13 @@ export interface DeliveryOrderResponse {
   createdAt: string;
   items: DeliveryOrderItemResponse[];
 }
+
+export interface DriverLocationResponse {
+  id?: string | null;
+  orderId?: string | null;
+  driverKeycloakId?: string | null;
+  latitude: number;
+  longitude: number;
+  accuracy?: number | null;
+  recordedAt?: string | null;
+}

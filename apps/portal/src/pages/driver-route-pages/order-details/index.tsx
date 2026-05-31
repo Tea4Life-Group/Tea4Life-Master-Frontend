@@ -18,10 +18,16 @@ import {
   getDriverOrderByIdApi,
   pickupDriverOrderApi,
   completeDriverOrderApi,
+  postDriverLocationApi,
 } from "@/services/orderApi";
-import type { DeliveryOrderResponse } from "@/types/order/OrderResponse";
+import type {
+  DeliveryOrderResponse,
+  DriverLocationResponse,
+} from "@/types/order/OrderResponse";
 import { handleError } from "@/lib/utils";
 import { toast } from "sonner";
+import DriverDeliveryMap from "@/components/driver/DriverDeliveryMap";
+import { goongApiV2 } from "@/lib/goong";
 
 export default function DriverOrderDetail() {
   const navigate = useNavigate();
@@ -30,6 +36,10 @@ export default function DriverOrderDetail() {
   const [order, setOrder] = useState<DeliveryOrderResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [driverLocation, setDriverLocation] =
+    useState<DriverLocationResponse | null>(null);
+  const [driverAddress, setDriverAddress] = useState<string | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -46,6 +56,90 @@ export default function DriverOrderDetail() {
     };
     fetchOrder();
   }, [id]);
+
+  useEffect(() => {
+    if (!id || order?.status !== "DELIVERING") return;
+
+    if (!("geolocation" in navigator)) {
+      const timer = window.setTimeout(() => {
+        setLocationError("Trình duyệt không hỗ trợ lấy vị trí hiện tại.");
+      }, 0);
+
+      return () => {
+        window.clearTimeout(timer);
+      };
+    }
+
+    let cancelled = false;
+
+    const syncDriverLocation = () => {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          if (cancelled) return;
+
+          const nextLocation: DriverLocationResponse = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            accuracy: position.coords.accuracy,
+            recordedAt: new Date().toISOString(),
+          };
+
+          setDriverLocation(nextLocation);
+          setLocationError(null);
+
+          try {
+            const res = await postDriverLocationApi(id, {
+              latitude: nextLocation.latitude,
+              longitude: nextLocation.longitude,
+              accuracy: nextLocation.accuracy,
+            });
+
+            if (!cancelled && res.data.data) {
+              setDriverLocation(res.data.data);
+            }
+          } catch (error) {
+            console.error("Không thể đồng bộ vị trí tài xế", error);
+            if (!cancelled) {
+              setLocationError("Không thể gửi vị trí hiện tại lên hệ thống.");
+            }
+          }
+
+          try {
+            const geocodeRes = await goongApiV2.reverseGeocode(
+              nextLocation.latitude,
+              nextLocation.longitude,
+            );
+            const address = geocodeRes?.results?.[0]?.formatted_address;
+
+            if (!cancelled) {
+              setDriverAddress(address || null);
+            }
+          } catch (error) {
+            console.error("Không thể lấy địa chỉ hiện tại của tài xế", error);
+          }
+        },
+        (error) => {
+          if (cancelled) return;
+          setLocationError(
+            error.message || "Không thể lấy vị trí hiện tại của tài xế.",
+          );
+        },
+        {
+          enableHighAccuracy: true,
+          maximumAge: 30000,
+          timeout: 15000,
+        },
+      );
+    };
+
+    syncDriverLocation();
+    const timer = window.setInterval(syncDriverLocation, 60000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [id, order?.status]);
 
   const handlePickup = async () => {
     if (!order) return;
@@ -156,6 +250,22 @@ export default function DriverOrderDetail() {
         </Card>
 
         {/* Lộ trình */}
+        {order.status === "DELIVERING" && (
+          <>
+            <DriverDeliveryMap
+              deliveryAddress={deliveryAddress}
+              driverLocation={driverLocation}
+              currentAddress={driverAddress}
+            />
+
+            {locationError && (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-bold text-amber-700">
+                {locationError}
+              </div>
+            )}
+          </>
+        )}
+
         <Card className="border-none shadow-sm rounded-3xl bg-white overflow-hidden">
           <CardContent className="p-6 relative">
             {/* Đường gạch nối lộ trình */}

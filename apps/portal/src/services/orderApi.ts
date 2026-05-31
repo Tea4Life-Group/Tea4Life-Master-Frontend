@@ -6,6 +6,7 @@ import type {
   OrderResponse,
   StoreOrderResponse,
   DeliveryOrderResponse,
+  DriverLocationResponse,
 } from "@/types/order/OrderResponse";
 import type { StoreResponse } from "@/types/store/StoreResponse";
 
@@ -127,5 +128,16 @@ export const pickupDriverOrderApi = async (id: string) => {
 export const completeDriverOrderApi = async (id: string) => {
   return await axiosClient.post<ApiResponse<DeliveryOrderResponse>>(
     `/order-service/driver/orders/${id}/complete`,
+  );
+};
+
+/** Post current driver location for an active delivery */
+export const postDriverLocationApi = async (
+  id: string,
+  data: Pick<DriverLocationResponse, "latitude" | "longitude" | "accuracy">,
+) => {
+  return await axiosClient.post<ApiResponse<DriverLocationResponse>>(
+    `/order-service/driver/orders/${id}/location`,
+    data,
   );
 };
