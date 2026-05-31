@@ -39,6 +39,7 @@ import AdminStoresPage from "@/pages/admin-route-pages/stores";
 import AdminNewsPage from "@/pages/admin-route-pages/news";
 import AdminNewsEditorPage from "@/pages/admin-route-pages/news/editor";
 import AdminNewsCategoriesPage from "@/pages/admin-route-pages/news-categories";
+import AdminBlogReviewsPage from "@/pages/admin-route-pages/blog-reviews";
 import AdminDriversPage from "@/pages/admin-route-pages/drivers";
 import AdminAiChatPage from "@/pages/admin-route-pages/ai-chat";
 
@@ -91,6 +92,7 @@ const adminRoutes = [
   { path: "news/create", element: <AdminNewsEditorPage /> },
   { path: "news/edit/:id", element: <AdminNewsEditorPage /> },
   { path: "news-categories", element: <AdminNewsCategoriesPage /> },
+  { path: "blog-reviews", element: <AdminBlogReviewsPage /> },
   { path: "drivers", element: <AdminDriversPage /> },
   { path: "ai-chat", element: <AdminAiChatPage /> },
 ];

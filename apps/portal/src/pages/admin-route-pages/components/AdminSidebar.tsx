@@ -21,6 +21,7 @@ import {
   LibraryBig,
   Truck,
   Bot,
+  MessageSquareText,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -65,6 +66,7 @@ const adminGroups: SidebarGroup[] = [
     links: [
       { name: "Tin tức", href: "/app/admin/news", icon: Newspaper },
       { name: "Chủ đề", href: "/app/admin/news-categories", icon: LibraryBig },
+      { name: "Blog review", href: "/app/admin/blog-reviews", icon: MessageSquareText },
     ],
   },
   {
