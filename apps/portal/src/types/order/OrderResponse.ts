@@ -57,6 +57,7 @@ export interface OrderResponse {
 export interface StoreOrderItemResponse {
   id: string;
   productId: string;
+  selectedOptions?: OrderItemOptionResponse[];
   quantity: number;
   unitPrice: number;
   subTotal: number;
