@@ -26,7 +26,16 @@ import {
   Package,
   Clock,
   X,
+  Eye,
+  ReceiptText,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn, handleError } from "@/lib/utils";
 import {
   getMyStoresApi,
@@ -35,6 +44,7 @@ import {
   readyStoreOrderApi,
   cancelStoreOrderApi,
 } from "@/services/orderApi";
+import { getProductByIdApi } from "@/services/productApi";
 import type { StoreResponse } from "@/types/store/StoreResponse";
 import type { StoreOrderResponse, OrderStatus } from "@/types/order/OrderResponse";
 import { toast } from "sonner";
@@ -76,6 +86,13 @@ export default function StoreOrdersPage() {
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState("all");
+  const [selectedOrder, setSelectedOrder] = useState<StoreOrderResponse | null>(
+    null,
+  );
+  const [productNames, setProductNames] = useState<Record<string, string>>({});
+  const [productLoadingIds, setProductLoadingIds] = useState<Set<string>>(
+    () => new Set(),
+  );
 
   useEffect(() => {
     const fetchStores = async () => {
@@ -108,7 +125,13 @@ export default function StoreOrdersPage() {
   }, [selectedStoreId]);
 
   useEffect(() => {
-    fetchOrders();
+    const timer = window.setTimeout(() => {
+      fetchOrders();
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
   }, [fetchOrders]);
 
   const handleAccept = async (orderId: string) => {
@@ -150,6 +173,9 @@ export default function StoreOrdersPage() {
     }
   };
 
+  const formatPrice = (price: number) =>
+    `${new Intl.NumberFormat("vi-VN").format(price)}đ`;
+
   const formatDate = (dateStr: string) => {
     try {
       return new Intl.DateTimeFormat("vi-VN", {
@@ -161,6 +187,55 @@ export default function StoreOrdersPage() {
       }).format(new Date(dateStr));
     } catch {
       return dateStr;
+    }
+  };
+
+  const handleViewDetails = async (order: StoreOrderResponse) => {
+    setSelectedOrder(order);
+
+    const missingProductIds = Array.from(
+      new Set(
+        order.items
+          .map((item) => item.productId)
+          .filter((productId) => productId && !productNames[productId]),
+      ),
+    );
+
+    if (missingProductIds.length === 0) return;
+
+    setProductLoadingIds((prev) => {
+      const next = new Set(prev);
+      missingProductIds.forEach((productId) => next.add(productId));
+      return next;
+    });
+
+    try {
+      const results = await Promise.allSettled(
+        missingProductIds.map(async (productId) => {
+          const res = await getProductByIdApi(productId);
+          return [productId, res.data.data.name] as const;
+        }),
+      );
+
+      const nextNames: Record<string, string> = {};
+      results.forEach((result) => {
+        if (result.status === "fulfilled") {
+          const [productId, productName] = result.value;
+          nextNames[productId] = productName;
+        }
+      });
+
+      if (Object.keys(nextNames).length > 0) {
+        setProductNames((prev) => ({ ...prev, ...nextNames }));
+      }
+    } catch (error) {
+      handleError(error, "Không thể tải tên sản phẩm.");
+    } finally {
+      setProductLoadingIds((prev) => {
+        const next = new Set(prev);
+        missingProductIds.forEach((productId) => next.delete(productId));
+        return next;
+      });
     }
   };
 
@@ -184,6 +259,12 @@ export default function StoreOrdersPage() {
     }
     return c;
   }, [orders]);
+
+  const selectedOrderItemCount = useMemo(() => {
+    return (
+      selectedOrder?.items.reduce((sum, item) => sum + item.quantity, 0) || 0
+    );
+  }, [selectedOrder]);
 
   if (storesLoading) {
     return (
@@ -322,7 +403,7 @@ export default function StoreOrdersPage() {
                         </span>
                       </TableCell>
                       <TableCell className="font-medium">
-                        {new Intl.NumberFormat("vi-VN").format(o.finalPrice)}đ
+                        {formatPrice(o.finalPrice)}
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className={cn(getStatusStyle(o.status))}>
@@ -334,6 +415,15 @@ export default function StoreOrdersPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="gap-1 text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                            onClick={() => handleViewDetails(o)}
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                            Chi tiết
+                          </Button>
                           {o.status === "PENDING" && (
                             <Button
                               variant="ghost"
@@ -401,6 +491,148 @@ export default function StoreOrdersPage() {
           )}
         </div>
       )}
+
+      <Dialog
+        open={!!selectedOrder}
+        onOpenChange={(open: boolean) => {
+          if (!open) setSelectedOrder(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-2xl">
+          {selectedOrder && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2 text-slate-800">
+                  <ReceiptText className="h-5 w-5 text-emerald-600" />
+                  Chi tiết đơn {selectedOrder.orderCode}
+                </DialogTitle>
+                <DialogDescription>
+                  Kiểm tra món cần chuẩn bị trước khi xác nhận đơn hàng.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-5">
+                <div className="grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm sm:grid-cols-2">
+                  <div>
+                    <p className="text-[10px] font-black uppercase text-slate-400">
+                      Khách hàng
+                    </p>
+                    <p className="mt-1 font-bold text-slate-800">
+                      {selectedOrder.receiverName}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      {selectedOrder.phone}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase text-slate-400">
+                      Trạng thái
+                    </p>
+                    <Badge
+                      variant="outline"
+                      className={cn("mt-1", getStatusStyle(selectedOrder.status))}
+                    >
+                      {STATUS_LABELS[selectedOrder.status]}
+                    </Badge>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <p className="text-[10px] font-black uppercase text-slate-400">
+                      Địa chỉ giao hàng
+                    </p>
+                    <p className="mt-1 text-slate-700">
+                      {[selectedOrder.detail, selectedOrder.ward, selectedOrder.province]
+                        .filter((s) => s && s !== "-")
+                        .join(", ")}
+                    </p>
+                  </div>
+                  {selectedOrder.note && (
+                    <div className="sm:col-span-2">
+                      <p className="text-[10px] font-black uppercase text-slate-400">
+                        Ghi chú
+                      </p>
+                      <p className="mt-1 text-slate-700">{selectedOrder.note}</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="rounded-lg border border-slate-200">
+                  <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+                    <div>
+                      <p className="text-sm font-black text-slate-800">
+                        Món cần chuẩn bị
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        Tổng {selectedOrderItemCount} món
+                      </p>
+                    </div>
+                    <span className="text-sm font-black text-emerald-600">
+                      {formatPrice(selectedOrder.finalPrice)}
+                    </span>
+                  </div>
+
+                  <div className="divide-y divide-slate-100">
+                    {selectedOrder.items.length > 0 ? (
+                      selectedOrder.items.map((item) => {
+                        const isProductLoading = productLoadingIds.has(
+                          item.productId,
+                        );
+                        const productName = productNames[item.productId];
+
+                        return (
+                          <div
+                            key={item.id}
+                            className="grid grid-cols-[1fr_auto] gap-3 px-4 py-3"
+                          >
+                            <div>
+                              <p className="font-bold text-slate-800">
+                                {productName ||
+                                  (isProductLoading
+                                    ? "Đang tải tên sản phẩm..."
+                                    : `Sản phẩm #${item.productId}`)}
+                              </p>
+                              <p className="mt-1 text-xs text-slate-500">
+                                Đơn giá {formatPrice(item.unitPrice)}
+                              </p>
+                              {item.selectedOptions &&
+                                item.selectedOptions.length > 0 && (
+                                  <div className="mt-2 flex flex-wrap gap-1.5">
+                                    {item.selectedOptions.map((option) => (
+                                      <span
+                                        key={option.productOptionValueId}
+                                        className="rounded-full border border-emerald-100 bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700"
+                                      >
+                                        {option.productOptionName}:{" "}
+                                        {option.productOptionValueName}
+                                        {option.extraPrice > 0 &&
+                                          ` (+${formatPrice(option.extraPrice)})`}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm font-black text-slate-800">
+                                x{item.quantity}
+                              </p>
+                              <p className="mt-1 text-xs font-bold text-slate-500">
+                                {formatPrice(item.subTotal)}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="px-4 py-8 text-center text-sm text-slate-400">
+                        Đơn hàng chưa có món.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -15,6 +15,7 @@ import {
   X,
   AlertCircle,
   MessageSquare,
+  BellRing,
 } from "lucide-react";
 import {
   getOrderByIdApi,
@@ -93,11 +94,64 @@ function getStatusBadgeClass(status: OrderStatus) {
   }
 }
 
+type AudioReminderWindow = Window &
+  typeof globalThis & {
+    webkitAudioContext?: typeof AudioContext;
+  };
+
+function playArrivalReminderSound() {
+  if (typeof window === "undefined") return;
+
+  const audioWindow = window as AudioReminderWindow;
+  const AudioContextClass =
+    audioWindow.AudioContext || audioWindow.webkitAudioContext;
+
+  if (!AudioContextClass) return;
+
+  try {
+    const audioContext = new AudioContextClass();
+    void audioContext.resume().catch(() => undefined);
+
+    const startAt = audioContext.currentTime + 0.03;
+    const beepOffsets = [0, 0.28, 0.56];
+
+    beepOffsets.forEach((offset) => {
+      const oscillator = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      const toneStart = startAt + offset;
+      const toneEnd = toneStart + 0.18;
+
+      oscillator.type = "sine";
+      oscillator.frequency.setValueAtTime(880, toneStart);
+      gain.gain.setValueAtTime(0.0001, toneStart);
+      gain.gain.exponentialRampToValueAtTime(0.18, toneStart + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, toneEnd);
+
+      oscillator.connect(gain);
+      gain.connect(audioContext.destination);
+      oscillator.start(toneStart);
+      oscillator.stop(toneEnd);
+    });
+
+    window.setTimeout(() => {
+      void audioContext.close().catch(() => undefined);
+    }, 1100);
+  } catch (error) {
+    console.warn("Không thể phát âm báo shipper sắp đến", error);
+  }
+}
+
 export default function OrderDetailPage() {
   const { id } = useParams();
   const [order, setOrder] = useState<OrderResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
+  const [distanceToDelivery, setDistanceToDelivery] = useState<number | null>(
+    null,
+  );
+  const [arrivalReminderVisible, setArrivalReminderVisible] = useState(false);
+  const [arrivalReminderTriggered, setArrivalReminderTriggered] =
+    useState(false);
   const [driverLocation, setDriverLocation] = useState<{
     latitude: number;
     longitude: number;
@@ -133,6 +187,44 @@ export default function OrderDetailPage() {
       if (timer) clearInterval(timer);
     };
   }, [id, order]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDistanceToDelivery(null);
+      setArrivalReminderVisible(false);
+      setArrivalReminderTriggered(false);
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [id, order?.status]);
+
+  useEffect(() => {
+    if (
+      order?.status !== "DELIVERING" ||
+      arrivalReminderTriggered ||
+      distanceToDelivery == null ||
+      distanceToDelivery > 200
+    ) {
+      return;
+    }
+
+    const roundedDistance = Math.max(0, Math.round(distanceToDelivery));
+    const timer = window.setTimeout(() => {
+      setArrivalReminderTriggered(true);
+      setArrivalReminderVisible(true);
+      toast.warning(
+        `Shipper còn khoảng ${roundedDistance}m nữa đến nơi. Vui lòng chú ý nghe điện thoại người giao hàng.`,
+        { duration: 15000 },
+      );
+      playArrivalReminderSound();
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [arrivalReminderTriggered, distanceToDelivery, order?.status]);
 
   useEffect(() => {
     if (!id) return;
@@ -266,10 +358,43 @@ export default function OrderDetailPage() {
           {/* Main Content: Items List */}
           <div className="lg:col-span-2 space-y-6">
             {order.status === "DELIVERING" && (
-              <OrderTrackingMap
-                deliveryAddress={fullAddress}
-                driverLocation={driverLocation}
-              />
+              <>
+                {arrivalReminderVisible && (
+                  <div className="flex items-start gap-3 border-2 border-amber-300 bg-amber-50 px-5 py-4 text-amber-900 shadow-sm">
+                    <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700">
+                      <BellRing className="h-5 w-5" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-black uppercase tracking-wider">
+                        Shipper sắp đến nơi
+                      </p>
+                      <p className="mt-1 text-sm font-medium">
+                        Người giao hàng còn khoảng{" "}
+                        {distanceToDelivery != null
+                          ? `${Math.max(0, Math.round(distanceToDelivery))}m`
+                          : "200m"}{" "}
+                        nữa đến điểm nhận. Vui lòng chú ý nghe điện thoại.
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      aria-label="Đóng thông báo"
+                      onClick={() => setArrivalReminderVisible(false)}
+                      className="h-8 w-8 rounded-none text-amber-700 hover:bg-amber-100 hover:text-amber-900"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+
+                <OrderTrackingMap
+                  deliveryAddress={fullAddress}
+                  driverLocation={driverLocation}
+                  onDistanceToDeliveryChange={setDistanceToDelivery}
+                />
+              </>
             )}
 
             <div className="bg-white border-2 border-[#1A4331]/15">

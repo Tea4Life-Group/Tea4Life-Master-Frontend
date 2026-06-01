@@ -7,10 +7,27 @@ import { Loader2, MapPinned, Truck } from "lucide-react";
 import type { DriverLocationResponse } from "@/types/order/OrderResponse";
 
 type TrackingMapPoint = { latitude: number; longitude: number };
+type LngLat = [number, number];
+type GoongGeoJsonSource = { setData: (data: unknown) => void };
+type GoongMap = {
+  resize: () => void;
+  remove: () => void;
+  isStyleLoaded: () => boolean;
+  once: (eventName: string, callback: () => void) => void;
+  getSource: (id: string) => GoongGeoJsonSource | undefined;
+  addSource: (id: string, source: unknown) => void;
+  addLayer: (layer: unknown) => void;
+  fitBounds: (bounds: unknown, options: unknown) => void;
+};
+type GoongMarker = {
+  setLngLat: (lngLat: LngLat) => GoongMarker;
+  addTo: (map: GoongMap) => GoongMarker;
+};
 
 interface OrderTrackingMapProps {
   deliveryAddress: string;
   driverLocation: DriverLocationResponse | null;
+  onDistanceToDeliveryChange?: (distanceMeters: number | null) => void;
 }
 
 function decodePolyline(encoded: string): Array<[number, number]> {
@@ -51,15 +68,41 @@ function decodePolyline(encoded: string): Array<[number, number]> {
   return coordinates;
 }
 
+function calculateDistanceMeters(
+  from: TrackingMapPoint,
+  to: TrackingMapPoint,
+) {
+  const earthRadiusMeters = 6371000;
+  const toRadians = (degree: number) => (degree * Math.PI) / 180;
+  const deltaLat = toRadians(to.latitude - from.latitude);
+  const deltaLng = toRadians(to.longitude - from.longitude);
+  const fromLat = toRadians(from.latitude);
+  const toLat = toRadians(to.latitude);
+
+  const haversine =
+    Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
+    Math.cos(fromLat) *
+      Math.cos(toLat) *
+      Math.sin(deltaLng / 2) *
+      Math.sin(deltaLng / 2);
+
+  return (
+    2 *
+    earthRadiusMeters *
+    Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine))
+  );
+}
+
 export default function OrderTrackingMap({
   deliveryAddress,
   driverLocation,
+  onDistanceToDeliveryChange,
 }: OrderTrackingMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<any>(null);
+  const mapRef = useRef<GoongMap | null>(null);
   const routeSourceId = "tracking-route-source";
-  const driverMarkerRef = useRef<any>(null);
-  const destinationMarkerRef = useRef<any>(null);
+  const driverMarkerRef = useRef<GoongMarker | null>(null);
+  const destinationMarkerRef = useRef<GoongMarker | null>(null);
 
   const [loadingRoute, setLoadingRoute] = useState(true);
   const [deliveryPoint, setDeliveryPoint] = useState<TrackingMapPoint | null>(
@@ -73,6 +116,19 @@ export default function OrderTrackingMap({
       longitude: driverLocation.longitude,
     };
   }, [driverLocation]);
+
+  useEffect(() => {
+    if (!onDistanceToDeliveryChange) return;
+
+    if (!latestDriverPoint || !deliveryPoint) {
+      onDistanceToDeliveryChange(null);
+      return;
+    }
+
+    onDistanceToDeliveryChange(
+      calculateDistanceMeters(latestDriverPoint, deliveryPoint),
+    );
+  }, [latestDriverPoint, deliveryPoint, onDistanceToDeliveryChange]);
 
   useEffect(() => {
     let ignore = false;
@@ -167,8 +223,7 @@ export default function OrderTrackingMap({
 
           const existingSource = map.getSource(routeSourceId);
           if (existingSource) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (existingSource as any).setData(geojson);
+            existingSource.setData(geojson);
           } else {
             map.addSource(routeSourceId, {
               type: "geojson",
