@@ -7,7 +7,7 @@ import {
   type KeyboardEvent,
 } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bot, Loader2, MessageCircle, Send, X } from "lucide-react";
+import { Bot, CheckCircle, Loader2, MessageCircle, Send, ShoppingCart, X } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -17,8 +17,14 @@ import {
   getProductAiChatHistoryApi,
 } from "@/services/productApi";
 import type { ProductSummaryResponse } from "@/types/product/ProductSummaryResponse";
+import type { ProductAiCartSuggestionResponse } from "@/types/product/ProductAiCartSuggestionResponse";
+import type { CartItemOptionSelectionRequest } from "@/types/cart/CartItemOptionSelectionRequest";
+import { addCartItemApi } from "@/services/cartApi";
 import { getMediaUrl } from "@/lib/utils";
 import { useAuth } from "@/features/auth/useAuth";
+import { useAppDispatch } from "@/features/store";
+import { fetchCart, setLastAction } from "@/features/cart/cartSlice";
+import { toast } from "sonner";
 
 type ChatRole = "assistant" | "user";
 
@@ -27,6 +33,9 @@ interface ChatMessage {
   role: ChatRole;
   content: string;
   recommendedProducts?: ProductSummaryResponse[];
+  cartSuggestions?: ProductAiCartSuggestionResponse[];
+  cartActionRequested?: boolean;
+  cartAdded?: boolean;
 }
 
 interface GuestConversationState {
@@ -55,12 +64,18 @@ function createMessage(
   role: ChatRole,
   content: string,
   recommendedProducts?: ProductSummaryResponse[],
+  cartSuggestions?: ProductAiCartSuggestionResponse[],
+  cartActionRequested = false,
+  cartAdded = false,
 ): ChatMessage {
   return {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     role,
     content,
     recommendedProducts,
+    cartSuggestions,
+    cartActionRequested,
+    cartAdded,
   };
 }
 
@@ -96,6 +111,12 @@ function parseStoredGuestConversation(
           item.recommendedProducts.length > 0
             ? item.recommendedProducts
             : undefined,
+        cartSuggestions:
+          Array.isArray(item.cartSuggestions) && item.cartSuggestions.length > 0
+            ? item.cartSuggestions
+            : undefined,
+        cartActionRequested: Boolean(item.cartActionRequested),
+        cartAdded: Boolean(item.cartAdded),
       }));
 
     if (sanitizedMessages.length === 0) {
@@ -121,6 +142,7 @@ function parseStoredGuestConversation(
 
 export default function ProductAiChatWidget() {
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
   const { isAuthenticated, email } = useAuth();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -442,6 +464,52 @@ export default function ProductAiChatWidget() {
     });
   };
 
+  const toCartOptionPayload = (
+    suggestion: ProductAiCartSuggestionResponse,
+  ): CartItemOptionSelectionRequest[] => {
+    return (suggestion.selectedOptions || []).map((option) => ({
+      productOptionId: String(option.productOptionId),
+      productOptionName: option.productOptionName,
+      productOptionValueId: String(option.productOptionValueId),
+      productOptionValueName: option.productOptionValueName,
+      extraPrice: option.extraPrice || 0,
+    }));
+  };
+
+  const addSuggestionsToCart = async (
+    suggestions: ProductAiCartSuggestionResponse[],
+  ) => {
+    for (const suggestion of suggestions) {
+      await addCartItemApi({
+        productId: String(suggestion.productId),
+        productName: suggestion.productName,
+        productImageUrl: suggestion.productImageUrl,
+        selectedOptions: toCartOptionPayload(suggestion),
+        unitPrice: suggestion.unitPrice || 0,
+        quantity: Math.max(1, suggestion.quantity || 1),
+      });
+    }
+
+    dispatch(setLastAction("add"));
+    dispatch(fetchCart());
+  };
+
+  const handleAddSuggestionToCart = async (
+    suggestion: ProductAiCartSuggestionResponse,
+  ) => {
+    if (!isAuthenticated) {
+      toast.warning("Bạn cần đăng nhập để thêm món vào giỏ hàng nhé!");
+      return;
+    }
+
+    try {
+      await addSuggestionsToCart([suggestion]);
+      toast.success("Đã thêm món vào giỏ hàng");
+    } catch {
+      toast.error("Không thể thêm món vào giỏ hàng lúc này.");
+    }
+  };
+
   const handleSend = async () => {
     const message = draft.trim();
     if (!message || isSending || isBootstrapping || sendingRef.current) return;
@@ -459,12 +527,39 @@ export default function ProductAiChatWidget() {
         throw new Error(payload.errorMessage || DEFAULT_ERROR);
       }
 
-      const answer = payload.data.answer?.trim() || DEFAULT_ERROR;
+      let answer = payload.data.answer?.trim() || DEFAULT_ERROR;
       const products =
         payload.data.recommendedProducts &&
         payload.data.recommendedProducts.length > 0
           ? payload.data.recommendedProducts
           : undefined;
+      const cartSuggestions =
+        payload.data.cartSuggestions && payload.data.cartSuggestions.length > 0
+          ? payload.data.cartSuggestions
+          : undefined;
+      let cartAdded = false;
+
+      if (payload.data.cartActionRequested && cartSuggestions?.length) {
+        if (!isAuthenticated) {
+          answer +=
+            "\n\nBạn cần đăng nhập để mình thêm các món này vào giỏ hàng nhé.";
+        } else {
+          try {
+            await addSuggestionsToCart(cartSuggestions);
+            cartAdded = true;
+            const totalQuantity = cartSuggestions.reduce(
+              (total, item) => total + Math.max(1, item.quantity || 1),
+              0,
+            );
+            answer += `\n\nMình đã thêm ${totalQuantity} món vào giỏ hàng cho bạn.`;
+            toast.success("AI đã thêm món vào giỏ hàng");
+          } catch {
+            answer +=
+              "\n\nMình đã chọn món rồi, nhưng chưa thêm được vào giỏ hàng lúc này.";
+            toast.error("Không thể thêm món AI đã chọn vào giỏ hàng.");
+          }
+        }
+      }
 
       const displayName = payload.data.chatboxDisplayName?.trim();
       if (displayName) {
@@ -477,7 +572,14 @@ export default function ProductAiChatWidget() {
 
       setMessages((prev) => [
         ...prev,
-        createMessage("assistant", answer, products),
+        createMessage(
+          "assistant",
+          answer,
+          products,
+          cartSuggestions,
+          Boolean(payload.data.cartActionRequested),
+          cartAdded,
+        ),
       ]);
     } catch {
       setMessages((prev) => [
@@ -560,6 +662,85 @@ export default function ProductAiChatWidget() {
                     </div>
 
                     {msg.role === "assistant" &&
+                      msg.cartSuggestions &&
+                      msg.cartSuggestions.length > 0 && (
+                        <div className="space-y-2 rounded-xl border border-[#1A4331]/10 bg-white p-3">
+                          {msg.cartSuggestions.map((suggestion) => (
+                            <div
+                              key={`${suggestion.productId}-${suggestion.productName}`}
+                              className="rounded-lg border border-[#1A4331]/10 p-2"
+                            >
+                              <div className="flex items-start gap-3">
+                                <button
+                                  type="button"
+                                  className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                                  onClick={() =>
+                                    handleSelectProduct(suggestion.productId)
+                                  }
+                                >
+                                  <img
+                                    src={
+                                      getMediaUrl(suggestion.productImageUrl) ||
+                                      "https://placehold.co/90x90/F8F5F0/1A4331?text=Tea"
+                                    }
+                                    alt={suggestion.productName}
+                                    className="h-12 w-12 rounded-md object-cover"
+                                  />
+                                  <div className="min-w-0 flex-1">
+                                    <p className="truncate text-sm font-semibold text-[#1A4331]">
+                                      {suggestion.quantity > 1
+                                        ? `${suggestion.quantity} x `
+                                        : ""}
+                                      {suggestion.productName}
+                                    </p>
+                                    <p className="text-xs font-semibold text-[#2F7A5B]">
+                                      {formatPrice(suggestion.unitPrice || 0)}
+                                    </p>
+                                  </div>
+                                </button>
+                                {msg.cartAdded ? (
+                                  <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#E6F4EC] text-[#1A4331]">
+                                    <CheckCircle className="h-4 w-4" />
+                                  </span>
+                                ) : (
+                                  <Button
+                                    type="button"
+                                    size="icon"
+                                    variant="outline"
+                                    className="h-9 w-9 shrink-0 border-[#1A4331]/20 text-[#1A4331]"
+                                    onClick={() =>
+                                      void handleAddSuggestionToCart(suggestion)
+                                    }
+                                  >
+                                    <ShoppingCart className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
+
+                              {suggestion.selectedOptions?.length > 0 && (
+                                <div className="mt-2 flex flex-wrap gap-1.5">
+                                  {suggestion.selectedOptions.map((option) => (
+                                    <span
+                                      key={`${suggestion.productId}-${option.productOptionId}-${option.productOptionValueId}`}
+                                      className="rounded-full bg-[#F7F4EC] px-2 py-1 text-[11px] font-medium text-[#5C7C69]"
+                                    >
+                                      {option.productOptionName}:{" "}
+                                      {option.productOptionValueName}
+                                      {option.extraPrice > 0
+                                        ? ` +${formatPrice(option.extraPrice)}`
+                                        : ""}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                    {msg.role === "assistant" &&
+                      (!msg.cartSuggestions ||
+                        msg.cartSuggestions.length === 0) &&
                       msg.recommendedProducts &&
                       msg.recommendedProducts.length > 0 && (
                         <div className="space-y-2 rounded-xl border border-[#1A4331]/10 bg-white p-3">

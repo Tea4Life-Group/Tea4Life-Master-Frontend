@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, memo } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button.tsx";
-import { Input } from "@/components/ui/input.tsx";
 import {
   Trash2,
   Plus,
@@ -291,24 +290,6 @@ const CartPage = () => {
                       <span className="text-[#1A4331]">
                         {formatPrice(total)}
                       </span>
-                    </div>
-                  </div>
-
-                  <div className="pt-4">
-                    <label className="text-xs text-[#1A4331] font-bold uppercase tracking-wider mb-2 block">
-                      Mã giảm giá (nếu có)
-                    </label>
-                    <div className="flex gap-2">
-                      <Input
-                        placeholder="NHAPMA"
-                        className="border-2 border-[#1A4331]/20 bg-[#F8F5F0] rounded-none focus-visible:ring-0 focus-visible:border-[#1A4331] text-sm"
-                      />
-                      <Button
-                        variant="outline"
-                        className="border-2 border-[#1A4331]/20 text-[#1A4331] hover:bg-[#1A4331] hover:text-[#F8F5F0] rounded-none text-sm font-bold"
-                      >
-                        Áp dụng
-                      </Button>
                     </div>
                   </div>
 
