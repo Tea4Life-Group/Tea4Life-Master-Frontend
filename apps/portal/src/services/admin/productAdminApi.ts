@@ -22,7 +22,7 @@ export const createAdminProductApi = async (data: CreateProductRequest) => {
 };
 
 export const updateAdminProductApi = async (id: string, data: CreateProductRequest) => {
-  return await axiosClient.post<ApiResponse<ProductResponse>>(`${BASE_URL}/${id}`, data);
+  return await axiosClient.put<ApiResponse<ProductResponse>>(`${BASE_URL}/${id}`, data);
 };
 
 export const deleteAdminProductApi = async (id: string) => {
