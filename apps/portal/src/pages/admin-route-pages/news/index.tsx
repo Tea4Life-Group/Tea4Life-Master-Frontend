@@ -102,7 +102,7 @@ export default function AdminNewsPage() {
             </p>
           </div>
           <Button
-            onClick={() => navigate("/admin/news/create")}
+            onClick={() => navigate("/app/admin/news/create")}
             className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl shadow-lg shadow-emerald-200/50 gap-2 px-8 h-12 font-bold transition-all active:scale-95 whitespace-nowrap"
           >
             <Plus className="h-5 w-5" />
@@ -124,7 +124,7 @@ export default function AdminNewsPage() {
                 title="Chưa có tin tức"
                 description="Hiện tại chưa có bài viết nào."
                 actionLabel="Tạo bài viết mới"
-                onAction={() => navigate("/admin/news/create")}
+                onAction={() => navigate("/app/admin/news/create")}
                 className="border-none shadow-none bg-white"
               />
             </div>
@@ -186,7 +186,7 @@ export default function AdminNewsPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => navigate(`/admin/news/edit/${n.id}`)}
+                            onClick={() => navigate(`/app/admin/news/edit/${n.id}`)}
                             className="h-10 w-10 rounded-2xl text-emerald-600 hover:bg-emerald-100 hover:text-emerald-700 transition-all active:scale-95 group"
                             title="Chỉnh sửa"
                           >

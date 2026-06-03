@@ -35,6 +35,7 @@ import {
 } from "@/services/admin/newsAdminApi";
 
 import type { NewsCategoryResponse } from "@/types/news/NewsCategoryResponse";
+import type { NewsChunkResponse } from "@/types/news/NewsChunkResponse";
 import type { NewsChunkRequest } from "@/types/news/NewsRequest";
 import ChunkItem from "./components/ChunkItem";
 import { handleUpload } from "@/services/storageApi";
@@ -88,7 +89,7 @@ export default function AdminNewsEditorPage() {
           }
 
           // Transform for Dnd-kit
-          const initialChunks = (data.chunks || []).map((c: any) => ({
+          const initialChunks = (data.chunks || []).map((c: NewsChunkResponse) => ({
             id: `chunk-${crypto.randomUUID()}`,
             type: c.type,
             content: c.content,
@@ -167,7 +168,7 @@ export default function AdminNewsEditorPage() {
       } else {
         toast.error("Tải ảnh bìa thất bại.");
       }
-    } catch (err) {
+    } catch {
       toast.error("Có lỗi xảy ra khi upload ảnh.");
     } finally {
       setUploadingThumb(false);
@@ -203,7 +204,7 @@ export default function AdminNewsEditorPage() {
         await createAdminNewsApi(payload);
         toast.success("Tạo bài viết mới thành công!");
       }
-      navigate("/admin/news");
+      navigate("/app/admin/news");
     } catch (error) {
       handleError(error, "Lưu bài viết thất bại.");
     } finally {
@@ -225,7 +226,7 @@ export default function AdminNewsEditorPage() {
         <Button
           variant="outline"
           size="icon"
-          onClick={() => navigate("/admin/news")}
+          onClick={() => navigate("/app/admin/news")}
           className="h-10 w-10 shrink-0 rounded-full"
         >
           <ArrowLeft className="h-5 w-5" />
@@ -375,7 +376,7 @@ export default function AdminNewsEditorPage() {
               Trạng thái: {isEditMode ? "Đang chỉnh sửa" : "Tạo bài mới"}
             </span>
             <div className="flex items-center gap-3">
-              <Button type="button" variant="ghost" onClick={() => navigate("/admin/news")} disabled={saving}>
+              <Button type="button" variant="ghost" onClick={() => navigate("/app/admin/news")} disabled={saving}>
                 Hủy bỏ
               </Button>
               <Button type="submit" disabled={saving || uploadingThumb} className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-lg shadow-emerald-200/50 min-w-[140px] font-bold">
