@@ -91,7 +91,7 @@ export default function RoleFormPage() {
             }
           } catch (error) {
             handleError(error, "Không thể tải thông tin chức vụ");
-            navigate("/admin/roles");
+            navigate("/app/admin/roles");
           }
         }
       } catch (error) {
@@ -154,7 +154,7 @@ export default function RoleFormPage() {
         await createRoleApi(payload);
         toast.success("Tạo chức vụ mới thành công!");
       }
-      navigate("/admin/roles");
+      navigate("/app/admin/roles");
     } catch (error) {
       handleError(error, isEdit ? "Cập nhật thất bại" : "Tạo mới thất bại");
     } finally {
@@ -169,7 +169,7 @@ export default function RoleFormPage() {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => navigate("/admin/roles")}
+          onClick={() => navigate("/app/admin/roles")}
           className="rounded-full hover:bg-emerald-50 text-slate-500"
         >
           <ArrowLeft className="h-5 w-5" />
@@ -183,7 +183,7 @@ export default function RoleFormPage() {
           </p>
         </div>
         <div className="ml-auto flex gap-2">
-          <Button variant="outline" onClick={() => navigate("/admin/roles")}>
+          <Button variant="outline" onClick={() => navigate("/app/admin/roles")}>
             Hủy bỏ
           </Button>
           <Button
